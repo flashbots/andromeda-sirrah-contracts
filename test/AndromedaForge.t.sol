@@ -11,6 +11,12 @@ contract AndromedaForgeTest is Test {
 	andromeda = new AndromedaForge();
     }
 
+    function test_localrandom() public {
+	bytes32 a = andromeda.localRandom();
+	bytes32 b = andromeda.localRandom();
+	require(a != b);
+    }
+
     function test_attest() public {
 	bytes32 tag = hex"deadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
 	bytes32 msghash = keccak256(abi.encodePacked("hi"));

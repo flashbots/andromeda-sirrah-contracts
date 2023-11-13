@@ -29,8 +29,8 @@ contract AndromedaForge {
 
     function localRandom() public view returns(bytes32) {
         string[] memory inputs = new string[](2);
-        inputs[0] = "python";
-        inputs[1] = "ffi/local_random.py";
+        inputs[0] = "sh";
+        inputs[1] = "ffi/local_random.sh";
         bytes memory res = vm.ffi(inputs);
 	return bytes32(res);
     }
