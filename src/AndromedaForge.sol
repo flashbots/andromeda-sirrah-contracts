@@ -58,10 +58,10 @@ contract AndromedaForge {
 
     // Currently active host
     string activeHost = "default";
-    function switchHost(string memory host) internal {
+    function switchHost(string memory host) public {
 	activeHost = host;
     }
-    function resetHost(address subject) internal {
+    function resetHost(address subject) public {
 	// Reset the data for this host
 	// If 0, Host loses all their data
     }
