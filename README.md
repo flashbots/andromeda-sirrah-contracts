@@ -6,7 +6,7 @@ See [./src/AndromedaForge.sol](./src/AndromedaForge.sol)
   
  - `Suave.localRandom`	uses [./ffi/local_random.sh](ffi/local_random.sh) to sample 32 bytes from `/dev/urandom`.
  - `Suave.attestSgx` provide remote attestations, here mocked just using an insecure hmac. Note that `Suave.verifySgx` could be pure Solidity and does not need to be a precompile 
- - `Suave.volatile{Get/Set}` provide ephemeral storage, local to *this kettle process*. If the kettle restarts, this resets too. Persistence using sealed files will be dealt with in a separate issue
+ - `Suave.volatile{Get/Set}` provide ephemeral storage, local to *this kettle process*. If the kettle restarts, this resets too. Persistence using sealed files will be dealt with in a separate issue. To mock volatile storage in Forge, we simply use environment variables (through `vm.setEnv`, `vm.envOr`). In a test environment, we can invoke `switchHost` to separate these.
   
 ### Key manager example based on Secret Network
 
