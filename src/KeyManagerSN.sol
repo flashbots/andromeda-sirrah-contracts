@@ -5,25 +5,6 @@ import {AndromedaForge} from "src/AndromedaForge.sol";
 import {Secp256k1} from "src/crypto/secp256k1.sol";
 import {PKE,Curve} from "src/crypto/encryption.sol";
 
-library Crypto {
-    function derivePubKey(bytes32 privkey) public view returns(bytes memory) {
-	Curve.G1Point memory p = PKE.derivePubKey(privkey);
-	return abi.encode(p.X, p.Y);
-    }
-    function deriveAddress(bytes32 privkey) public pure returns(address) {
-	(uint gx, uint gy) = Secp256k1.derivePubKey(uint(privkey));
-	bytes memory pubkey = abi.encode(gx, gy);
-	return address(bytes20(pubkey));
-    }
-    function encrypt(bytes memory pubkey, bytes32 r, bytes memory message) public view returns(bytes memory) {
-	(uint gx, uint gy) = abi.decode(pubkey, (uint,uint));
-	Curve.G1Point memory pub = Curve.G1Point(gx,gy);
-	return PKE.encrypt(pub, r, message);
-    }
-    function decrypt(bytes32 privkey, bytes memory ciphertext) public view returns(bytes memory) {
-	return PKE.decrypt(privkey, ciphertext);
-    }
-}
 
 contract KeyManagerSN {
     AndromedaForge Suave;
@@ -87,5 +68,25 @@ contract KeyManagerSN {
 	bytes32 xPriv = abi.decode(Crypto.decrypt(myPriv, ciphertext), (bytes32));
 	require(keccak256(Crypto.derivePubKey(xPriv)) == keccak256(xPub));
 	Suave.volatileSet("xPriv", xPriv);
+    }
+}
+
+library Crypto {
+    function derivePubKey(bytes32 privkey) public view returns(bytes memory) {
+	Curve.G1Point memory p = PKE.derivePubKey(privkey);
+	return abi.encode(p.X, p.Y);
+    }
+    function deriveAddress(bytes32 privkey) public pure returns(address) {
+	(uint gx, uint gy) = Secp256k1.derivePubKey(uint(privkey));
+	bytes memory pubkey = abi.encode(gx, gy);
+	return address(bytes20(pubkey));
+    }
+    function encrypt(bytes memory pubkey, bytes32 r, bytes memory message) public view returns(bytes memory) {
+	(uint gx, uint gy) = abi.decode(pubkey, (uint,uint));
+	Curve.G1Point memory pub = Curve.G1Point(gx,gy);
+	return PKE.encrypt(pub, r, message);
+    }
+    function decrypt(bytes32 privkey, bytes memory ciphertext) public view returns(bytes memory) {
+	return PKE.decrypt(privkey, ciphertext);
     }
 }
