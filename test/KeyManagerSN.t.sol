@@ -33,7 +33,7 @@ contract KeyManagerSNTest is Test {
 	// 1. Bootstrap
 	// 1a. Offchain generate the key
 	andromeda.switchHost("alice");
-	(bytes memory xPub, bytes memory att) = keymgr.offchain_Bootstrap();
+	(address xPub, bytes memory att) = keymgr.offchain_Bootstrap();
 
 	// 1b. Post the key and attestation on-chain
 	vm.startBroadcast();
@@ -60,5 +60,4 @@ contract KeyManagerSNTest is Test {
 	andromeda.switchHost("bob");
 	keymgr.finish_Onboard(ciphertext);
     }
-
 }

@@ -19,4 +19,10 @@ library Secp256k1 {
 	    PP
 	);
     }
+
+    function deriveAddress(uint256 privKey) pure public returns(address) {
+	(uint qx, uint qy) = derivePubKey(privKey);
+	bytes memory ser = bytes.concat(bytes32(qx), bytes32(qy));
+	return address(uint160(uint256(keccak256(ser))));
+    }
 }

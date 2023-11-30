@@ -12,11 +12,13 @@ library Signing {
 
 library PKE {
 
-    function derivePubKey(bytes32 secretKey) public view returns(Curve.G1Point memory) {
-	return Curve.g1mul(Curve.P1(), uint(secretKey));
+    function derivePubKey(bytes32 secretKey) public view
+    returns(bytes memory) {
+	Curve.G1Point memory p = Curve.g1mul(Curve.P1(), uint(secretKey));
+	return abi.encode(p.X, p.Y);
     }
     
-    // Improvised... replace with ECIES or similar later
+    // Improvised... replace with ECIES or similar later?
     function encrypt(Curve.G1Point memory pub, bytes32 r, bytes memory m) public view
     returns (bytes memory) {
 	Curve.G1Point memory sk    = Curve.g1mul(pub,        uint(r));
