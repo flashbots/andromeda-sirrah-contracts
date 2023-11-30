@@ -3,6 +3,7 @@ pragma solidity ^0.8.13;
 
 import {Test, console2} from "forge-std/Test.sol";
 import {KeyManagerSN} from "../src/KeyManagerSN.sol";
+import {PKE} from "../src/crypto/encryption.sol";
 import {AndromedaForge} from "src/AndromedaForge.sol";
 import "forge-std/Vm.sol";
 
@@ -34,21 +35,15 @@ contract KeyManagerSNTest is Test {
 	// 1a. Offchain generate the key
 	andromeda.switchHost("alice");
 	(address xPub, bytes memory att) = keymgr.offchain_Bootstrap();
-
 	// 1b. Post the key and attestation on-chain
-	vm.startBroadcast();
 	keymgr.onchain_Bootstrap(xPub, att);
-	vm.stopBroadcast();
 
 	// 2. Register a new node
 	// 2a. Offchain generate a register request
 	andromeda.switchHost("bob");
-	(address bob_kettle, bytes memory bPub, bytes memory attB) = keymgr.offchain_Register();
-	
+	(address bob_kettle, bytes memory bPub, bytes memory attB) = keymgr.offchain_Register();	
 	// 2b. Onchain submit the request
-	vm.startBroadcast();	
 	keymgr.onchain_Register(bob_kettle, bPub, attB);
-	vm.stopBroadcast();
 
 	// 3. Help onboard a new node
 	// 3a. Offchain generate a ciphertext with the key
@@ -59,5 +54,19 @@ contract KeyManagerSNTest is Test {
 	// 3c. Load the data received
 	andromeda.switchHost("bob");
 	keymgr.finish_Onboard(ciphertext);
+    }
+
+    function testDerived() public {
+	// Do the bootstrap
+	(address xPub, bytes memory att) = keymgr.offchain_Bootstrap();
+	keymgr.onchain_Bootstrap(xPub, att);
+
+	// Show the derived key associated with this contract.
+	(bytes memory dPub, uint8 v, bytes32 r, bytes32 s) =
+	    keymgr.offchain_DeriveKey(address(this));
+	keymgr.onchain_DeriveKey(address(this), dPub, v, r, s);
+
+	bytes32 dPriv = keymgr.derivedPriv();
+	assertEq(PKE.derivePubKey(dPriv), keymgr.derivedPub(address(this)));
     }
 }

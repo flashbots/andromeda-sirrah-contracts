@@ -3,14 +3,14 @@ pragma solidity ^0.8.8;
 
 import {AndromedaForge} from "src/AndromedaForge.sol";
 import {Secp256k1} from "src/crypto/secp256k1.sol";
-import {PKE,Curve} from "src/crypto/encryption.sol";
+import {Signing,PKE,Curve} from "src/crypto/encryption.sol";
 
 abstract contract KeyManagerBase {
     // Anyone can see the master public key
     address xPub;
 
     // Mapping to nonzero indicates valid Kettle
-    mapping ( address => bytes ) registry;    
+    mapping ( address => bytes ) registry;
 
     // Only the contract in confidential mode can access the
     // master private key
@@ -18,13 +18,17 @@ abstract contract KeyManagerBase {
 
     // Any contract in confidential mode can request a
     // hardened derived key
+    function _derivedPriv(address a) public returns (bytes32) {
+	return keccak256(abi.encodePacked(a,xPriv()));
+    }
     function derivedPriv() public returns (bytes32) {
-	return keccak256(abi.encodePacked(msg.sender,xPriv()));
+	return _derivedPriv(msg.sender);
     }
 
-    // Because we are using hardened derivation, contracts
+    // Because we are using hardened derivation, for each 
+    // contract we will need someone to sign it off chain
     mapping (address => bytes) public derivedPub;
-    function setDerivedPub(address a,
+    function onchain_DeriveKey(address a,
 			   bytes memory dPub,
 			   // Signature from a valid kettle
 			   uint8 v, bytes32 r, bytes32 s)
@@ -32,8 +36,17 @@ abstract contract KeyManagerBase {
     returns(bytes32) {
 	bytes32 digest = keccak256(abi.encodePacked(a,dPub));
 	address signer = ecrecover(digest, v, r, s);
-	require(registry[signer].length != 0);
+	require(signer == xPub);
 	derivedPub[a] = dPub;
+    }
+
+    function offchain_DeriveKey(address a)
+    public
+    returns(bytes memory dPub, uint8 v, bytes32 r, bytes32 s) {
+	bytes32 dPriv = _derivedPriv(a);
+	dPub = PKE.derivePubKey(dPriv);
+	bytes32 digest = keccak256(abi.encodePacked(a,dPub));
+	(v,r,s) = Secp256k1.sign(uint(xPriv()), digest, 0x232343);
     }
 }
 
@@ -59,7 +72,9 @@ contract KeyManagerSN is KeyManagerBase {
 	return Suave.volatileGet("xPriv");
     }
    
-    function onchain_Bootstrap(address _xPub, bytes memory att) public {
+    function onchain_Bootstrap(address _xPub, bytes memory att)
+    public
+    {
 	require(xPub == address(0)); // only once
 	Suave.verifySgx(address(this), "xPub", keccak256(abi.encodePacked(_xPub)), att);
 	xPub = _xPub;

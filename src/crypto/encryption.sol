@@ -2,12 +2,11 @@
 pragma solidity ^0.8.0;
 
 import "./bn256g1.sol";
+import "./secp256k1.sol";
+import "./EllipticCurve.sol";
 
 library Signing {
-    /*function sign(uint256 privateKey, bytes32 digest) external returns (uint8 v, bytes32 r, bytes32 s) {
-	// TODO:
-	return (0,0,0);
-    }*/
+    using EllipticCurve for *;
 }
 
 library PKE {
