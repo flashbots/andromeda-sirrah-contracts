@@ -2,22 +2,25 @@
 pragma solidity ^0.8.0;
 
 import "./bn256g1.sol";
-
-library Signing {
-    /*function sign(uint256 privateKey, bytes32 digest) external returns (uint8 v, bytes32 r, bytes32 s) {
-	// TODO:
-	return (0,0,0);
-    }*/
-}
+import "./secp256k1.sol";
+import "./EllipticCurve.sol";
 
 library PKE {
 
-    function derivePubKey(bytes32 secretKey) public view returns(Curve.G1Point memory) {
-	return Curve.g1mul(Curve.P1(), uint(secretKey));
+    function derivePubKey(bytes32 secretKey) public view
+    returns(bytes memory) {
+	Curve.G1Point memory p = Curve.g1mul(Curve.P1(), uint(secretKey));
+	return abi.encodePacked(p.X, p.Y);
+    }
+
+    function encrypt(bytes memory pubkey, bytes32 r, bytes memory message) public view returns(bytes memory) {
+	(uint gx, uint gy) = abi.decode(pubkey, (uint,uint));
+	Curve.G1Point memory pub = Curve.G1Point(gx,gy);
+	return _encrypt(pub, r, message);
     }
     
-    // Improvised... replace with ECIES or similar later
-    function encrypt(Curve.G1Point memory pub, bytes32 r, bytes memory m) public view
+    // Improvised... replace with ECIES or similar later?
+    function _encrypt(Curve.G1Point memory pub, bytes32 r, bytes memory m) internal view
     returns (bytes memory) {
 	Curve.G1Point memory sk    = Curve.g1mul(pub,        uint(r));
 	Curve.G1Point memory mypub = Curve.g1mul(Curve.P1(), uint(r));
