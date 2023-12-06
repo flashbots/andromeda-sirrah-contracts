@@ -1,16 +1,29 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.8;
 
-import {AndromedaForge} from "src/AndromedaForge.sol";
+import {IAndromeda} from "src/IAndromeda.sol";
 import {Secp256k1} from "src/crypto/secp256k1.sol";
-import {Signing,PKE,Curve} from "src/crypto/encryption.sol";
+import {PKE,Curve} from "src/crypto/encryption.sol";
 
 abstract contract KeyManagerBase {
     // Anyone can see the master public key
     address xPub;
 
-    // Mapping to nonzero indicates valid Kettle
-    mapping ( address => bytes ) registry;
+    // Attestation is now possible using the caller as domain
+    // separator
+    function attest(bytes32 appData)
+    public returns(bytes memory) {
+	bytes32 digest = keccak256(abi.encodePacked(msg.sender, appData));
+	return Secp256k1.sign(uint(xPriv()), digest);
+    }
+    
+    function verify(address caller, bytes32 appData, bytes memory sig)
+    public view returns(bool)  {
+	bytes32 digest = keccak256(abi.encodePacked(caller, appData));
+	return Secp256k1.verify(xPub, digest, sig);
+    }
+
+    // Key derivation for encryption
 
     // Only the contract in confidential mode can access the
     // master private key
@@ -31,29 +44,28 @@ abstract contract KeyManagerBase {
     function onchain_DeriveKey(address a,
 			   bytes memory dPub,
 			   // Signature from a valid kettle
-			   uint8 v, bytes32 r, bytes32 s)
-    public
-    returns(bytes32) {
+			   bytes memory sig)
+    public {
 	bytes32 digest = keccak256(abi.encodePacked(a,dPub));
-	address signer = ecrecover(digest, v, r, s);
-	require(signer == xPub);
+	require(Secp256k1.verify(xPub, digest, sig));
 	derivedPub[a] = dPub;
     }
 
     function offchain_DeriveKey(address a)
     public
-    returns(bytes memory dPub, uint8 v, bytes32 r, bytes32 s) {
+    returns(bytes memory dPub, bytes memory sig) {
 	bytes32 dPriv = _derivedPriv(a);
 	dPub = PKE.derivePubKey(dPriv);
 	bytes32 digest = keccak256(abi.encodePacked(a,dPub));
-	(v,r,s) = Secp256k1.sign(uint(xPriv()), digest, 0x232343);
-    }
+	sig = Secp256k1.sign(uint(xPriv()), digest);
+	require(Secp256k1.verify(xPub, digest, sig));
+    }    
 }
 
 contract KeyManagerSN is KeyManagerBase {
-    AndromedaForge Suave;
+    IAndromeda public Suave;
 
-    constructor(AndromedaForge _Suave) {
+    constructor(IAndromeda _Suave) {
 	Suave = _Suave;
     }
     
@@ -62,10 +74,11 @@ contract KeyManagerSN is KeyManagerBase {
     
     // 1. Bootstrap phase
     function offchain_Bootstrap() public returns(address _xPub, bytes memory att) {
-	bytes32 xPriv = Suave.localRandom();
-	_xPub = Secp256k1.deriveAddress(uint(xPriv));
-	Suave.volatileSet("xPriv", xPriv);
-	att = Suave.attestSgx("xPub", keccak256(abi.encodePacked(_xPub)));
+	bytes32 xPriv_ = Suave.localRandom();
+	//bytes32 xPriv_ = bytes32(0xc0556a063cd234bbda7cbf93fdae2511238353f7dfe912edd27a08f0efc0cb61);
+	_xPub = Secp256k1.deriveAddress(uint(xPriv_));
+	Suave.volatileSet("xPriv", xPriv_);
+	att = Suave.attestSgx(keccak256(abi.encodePacked("xPub", _xPub)));
     }
 
     function xPriv() internal override returns(bytes32) {
@@ -76,23 +89,26 @@ contract KeyManagerSN is KeyManagerBase {
     public
     {
 	require(xPub == address(0)); // only once
-	Suave.verifySgx(address(this), "xPub", keccak256(abi.encodePacked(_xPub)), att);
+	require(Suave.verifySgx(address(this), keccak256(abi.encodePacked("xPub", _xPub)), att));
 	xPub = _xPub;
     }
     
-    // 2. New node register phase    
+    // 2. New node register phase
+    // Mapping to nonzero indicates valid Kettle
+    mapping ( address => bytes ) registry;
+   
     function offchain_Register() public returns(address, bytes memory, bytes memory) {
 	bytes32 myPriv = Suave.localRandom();
 	bytes memory myPub = PKE.derivePubKey(myPriv);
 	address addr = address(Secp256k1.deriveAddress(uint(myPriv)));
 	Suave.volatileSet("myPriv", myPriv);
-	bytes memory att = Suave.attestSgx("myPub", keccak256(abi.encode(myPub, addr)));
+	bytes memory att = Suave.attestSgx(keccak256(abi.encodePacked("myPub", myPub, addr)));
 	return (addr, myPub, att);
     }
 
     function onchain_Register(address addr, bytes memory myPub, bytes memory att) public {
 	require(keccak256(registry[addr]) == keccak256(bytes("")));
-	Suave.verifySgx(address(this), "myPub", keccak256(abi.encode(myPub, addr)), att);
+	require(Suave.verifySgx(address(this), keccak256(abi.encodePacked("myPub", myPub, addr)), att));
 	registry[addr] = myPub;
     }
     
@@ -100,8 +116,8 @@ contract KeyManagerSN is KeyManagerBase {
     // 3a. A Kettle that already has the key onboards the new node
     function offchain_Onboard(address newkettle) public returns(bytes memory ciphertext) {
 	bytes32 r = Suave.localRandom();
-	return Crypto.encrypt(registry[newkettle], r,
-			      abi.encodePacked(xPriv()));
+	return PKE.encrypt(registry[newkettle], r,
+			   abi.encodePacked(xPriv()));
     }
 
     event Onboard(address addr, bytes ciphertext);    
@@ -112,17 +128,8 @@ contract KeyManagerSN is KeyManagerBase {
 
     function finish_Onboard(bytes memory ciphertext) public {
 	bytes32 myPriv = Suave.volatileGet("myPriv");
-	bytes32 xPriv = abi.decode(PKE.decrypt(myPriv, ciphertext), (bytes32));
-	require(Secp256k1.deriveAddress(uint(xPriv)) == xPub);
-	Suave.volatileSet("xPriv", xPriv);
-    }
-}
-
-library Crypto {
-
-    function encrypt(bytes memory pubkey, bytes32 r, bytes memory message) public view returns(bytes memory) {
-	(uint gx, uint gy) = abi.decode(pubkey, (uint,uint));
-	Curve.G1Point memory pub = Curve.G1Point(gx,gy);
-	return PKE.encrypt(pub, r, message);
+	bytes32 xPriv_ = abi.decode(PKE.decrypt(myPriv, ciphertext), (bytes32));
+	require(Secp256k1.deriveAddress(uint(xPriv_)) == xPub);
+	Suave.volatileSet("xPriv", xPriv_);
     }
 }

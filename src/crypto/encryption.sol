@@ -5,20 +5,22 @@ import "./bn256g1.sol";
 import "./secp256k1.sol";
 import "./EllipticCurve.sol";
 
-library Signing {
-    using EllipticCurve for *;
-}
-
 library PKE {
 
     function derivePubKey(bytes32 secretKey) public view
     returns(bytes memory) {
 	Curve.G1Point memory p = Curve.g1mul(Curve.P1(), uint(secretKey));
-	return abi.encode(p.X, p.Y);
+	return abi.encodePacked(p.X, p.Y);
+    }
+
+    function encrypt(bytes memory pubkey, bytes32 r, bytes memory message) public view returns(bytes memory) {
+	(uint gx, uint gy) = abi.decode(pubkey, (uint,uint));
+	Curve.G1Point memory pub = Curve.G1Point(gx,gy);
+	return _encrypt(pub, r, message);
     }
     
     // Improvised... replace with ECIES or similar later?
-    function encrypt(Curve.G1Point memory pub, bytes32 r, bytes memory m) public view
+    function _encrypt(Curve.G1Point memory pub, bytes32 r, bytes memory m) internal view
     returns (bytes memory) {
 	Curve.G1Point memory sk    = Curve.g1mul(pub,        uint(r));
 	Curve.G1Point memory mypub = Curve.g1mul(Curve.P1(), uint(r));

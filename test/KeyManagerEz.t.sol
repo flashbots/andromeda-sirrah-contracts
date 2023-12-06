@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {Test, console2} from "forge-std/Test.sol";
-import {KeyManagerSN} from "../src/KeyManagerSN.sol";
+import {KeyManagerSN} from "../src/02-KeyManagerEz.sol";
 import {PKE} from "../src/crypto/encryption.sol";
 import {AndromedaForge} from "src/AndromedaForge.sol";
 import "forge-std/Vm.sol";
@@ -17,16 +17,11 @@ contract KeyManagerSNTest is Test {
 
     function setUp() public {
 	andromeda = new AndromedaForge();
+	vm.prank(address(0x1));	
 	keymgr = new KeyManagerSN(andromeda);
 
 	alice = vm.createWallet("alice");
 	bob = vm.createWallet("bob");
-	/*
-	bob = vm.createWallet("bob");
-	carol = vm.createWallet("carol");
-	vm.deal(alice.addr, 100);
-	vm.deal(bob.addr, 100);
-	vm.deal(carol.addr, 100);*/
     }
 
     function testKeyManager() public {
@@ -62,9 +57,9 @@ contract KeyManagerSNTest is Test {
 	keymgr.onchain_Bootstrap(xPub, att);
 
 	// Show the derived key associated with this contract.
-	(bytes memory dPub, uint8 v, bytes32 r, bytes32 s) =
+	(bytes memory dPub, bytes memory sig) =
 	    keymgr.offchain_DeriveKey(address(this));
-	keymgr.onchain_DeriveKey(address(this), dPub, v, r, s);
+	keymgr.onchain_DeriveKey(address(this), dPub, sig);
 
 	bytes32 dPriv = keymgr.derivedPriv();
 	assertEq(PKE.derivePubKey(dPriv), keymgr.derivedPub(address(this)));

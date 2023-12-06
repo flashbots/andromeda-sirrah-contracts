@@ -1,38 +1,58 @@
-## Andromeda Key Manager Contracts
+# Andromeda Sirrah Contracts
 
-### Mockup in forge of precompiles used by Andromeda.
+This repository contains the smart contracts and development environment that go along with the post "Sirrah: Speedrunning a TEE Coprocessor."
 
-See [./src/AndromedaForge.sol](./src/AndromedaForge.sol)
-  
- - `Suave.localRandom`	uses [./ffi/local_random.sh](ffi/local_random.sh) to sample 32 bytes from `/dev/urandom`.
- - `Suave.attestSgx` provide remote attestations, here mocked just using an insecure hmac. Note that `Suave.verifySgx` could be pure Solidity and does not need to be a precompile 
- - `Suave.volatile{Get/Set}` provide ephemeral storage, local to *this kettle process*. If the kettle restarts, this resets too. Persistence using sealed files will be dealt with in a separate issue. To mock volatile storage in Forge, we simply use environment variables (through `vm.setEnv`, `vm.envOr`). In a test environment, we can invoke `switchHost` to separate these.
-  
-### Key manager example based on Secret Network
+The contracts here make use of the Andromeda precompiles. The actual implementation of these in an EVM running on SGX are in a [separate repository.](https://github.com/flashbots/revm-andromeda/). The forge development environment here does NOT require any SGX.
 
-  See [./src/KeyManagerSN.sol](./src/KeyManagerSN.sol). A [test scenario](./test/KeyManagerSN.t.sol) goes along with the following:
-  
-  1. **Bootstrapping.**
-      - *1a. Off-chain*. One node goes first. It uses `Suave.localRandom()` to generate a key `xPriv`, and stores it locally with `Suave.volatileSet()`.
-      - *1b. On-chain*. The resulting public key `xPub` is stored on chain after checking the remote attestation.
-  2. **New Node registers.**
-      - *2a. Off-chain*. A new node register. It uses `Suave.localRandom()` to generate a temporary key `myPriv`, and stores it locally with `Suave.volatileSet()`.
-      - *2b. On-chain*. The resulting temporary key `myPub` is stored on chain after checking the remote attestation.
-  3. **Existing node onboards the new node.**
-      - *3a. Off-chain at the existing node*. An existing node fetches `xPriv` from volatile storage, and encrypts it to the new node's `myPub`.
-      - *3b. On-chain*. This isn't necessary, but the `ciphertext` can be posted on-chain.
-      - *3c. Off-chain at the new node.* The new node decrypts `xPriv` and stores in volatile storage.
+## 01 - Sealed second price auction application
 
-The libraries in [./src/crypto/](./src/crypto/) include Solidity implementations of
-  - public key encryption using `bn128` (Byzantium opcodes), along with the following symmetric encryption
-  - symmetric encryption using `keccak` as a block cipher
-  - deriving an Ethereum address from a private key
+The main production of this demo is a sealed bid auction
+Looking at [./src/01-Auction.sol:LeakyAuction](./src/01-Auction.sol), we can see a second price auction in Solidity. But due to a lack of privacy, it is vulnerable to griefing by validators.
 
-These come from searching libraries but these haven't been carefully vetted. They should be easily replaceable though.
+The fixed auction making use of [./src/01-Auction.sol:SealedAuction](./src/01-Auction.sol)
+
+## 02 - Example Key Manager 
+
+The approach to key management was a little simplistic. There's only a single. 
+So, we next show how to extend this.
+
+- Verification of a raw SGX attestation (expensive in Solidity gas) only needs to occur once per Kettle. After initial registration, ordinary digital signatures can be used instead. Much cheaper.
+- Multiple Kettles can join. Newly registered Kettles receive a copy of the key from existing Kettles that already have it
+- A single instance of the Key Manager contract can be used by other contracts.
+
+## Forge Mockup of Andromeda precompiles.
+
+This project is built on the low-level Andromeda precompiles: (See [./src/IAndromeda.sol](./src/IAndromeda.sol)):
+- *Sampling random bytes*.
+```solidity
+function localRandom() view external returns(bytes32);
+```
+- *Process storage*
+```solidity
+function volatileSet(bytes32 tag, bytes32 value) external;
+function volatileGet(bytes32 tag) external returns(bytes32 value);
+```
+- *Remote attestation*
+ ```solidity
+function attestSgx(bytes32 appData) external returns (bytes memory att);
+function verifySgx(address caller, bytes32 appData, bytes memory att) external view returns (bool);`
+```
+
+Note that `verifySgx` is implemented in pure Solidity and does not require a precompile.
+Sampling randomness requires the `ffi` interface (see [./ffi/local_random.sh](./ffi/local_random.sh)).
+
+There are two instantiations of this interface:
+- *Using mock attestations.* No dependency required. [./src/AndromedaForge.sol](./src/AndromedaForge.sol)
+- *Using a remote attestation service.* This requires Python and the `eth_abi` in order to fetch from a remote website. [./src/AndromedaRemote.sol](./src/AndromedaRemote.sol) 
 
 ## Usage
 
 Relies on https://getfoundry.sh/
+
+### Requires python
+```shell
+pip install -r requirements.txt
+```
 
 ### Build
 

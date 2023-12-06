@@ -21,7 +21,22 @@ library Secp256k1 {
 	);
     }
 
-    function sign(uint256 privateKey, bytes32 digest, uint k) public pure returns (uint8, bytes32, bytes32) {
+    function verify(address signer, bytes32 digest, bytes memory sig) public pure returns(bool) {
+	uint8 v; bytes32 r; bytes32 s;
+	assembly { 
+            v := mload(add(sig,1))
+            r := mload(add(sig,33))
+            s := mload(add(sig,65))
+	}
+	return signer == ecrecover(digest, v, r, s);
+    }
+
+    function sign(uint256 privateKey, bytes32 digest) public pure returns (bytes memory) {
+
+	// Step 0: Deterministic choice of k
+	// See RFC 6979
+	// TODO: replace this with wiser choice
+	uint k = uint(sha256(abi.encodePacked(uint(0x0101010101010101010101010101010101010101010101010101010101010101), uint8(0), digest)));
 	
 	// Step 1: Ephemeral Key Pair Generation
 	(uint256 x1, uint256 y1) = EllipticCurve.ecMul(k, GX, GY, AA, PP); // Ephemeral public key
@@ -46,7 +61,7 @@ library Secp256k1 {
 	} else {
 	    v = 28;
 	}
-	return (v, bytes32(r), bytes32(s));
+	return abi.encodePacked(v, bytes32(r), bytes32(s));
     }
 
     function deriveAddress(uint256 privKey) pure public returns(address) {

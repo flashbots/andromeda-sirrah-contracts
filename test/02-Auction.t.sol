@@ -1,0 +1,77 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+import {AndromedaRemote} from "../src/AndromedaRemote.sol";
+import {SigVerifyLib} from "automata-dcap-v3-attestation/utils/SigVerifyLib.sol";
+
+import {Test, console2} from "forge-std/Test.sol";
+import "../src/crypto/secp256k1.sol";
+import {KeyManagerSN} from "../src/02-KeyManagerEz.sol";
+import {LeakyAuction, SealedAuction, PKE,
+	Curve} from "../src/02-Auction.sol";
+
+contract SealedAuctionTest is Test {
+    AndromedaRemote andromeda;
+    KeyManagerSN keymgr;
+
+    address alice;
+    address bob;
+
+    function setUp() public {
+	SigVerifyLib lib = new SigVerifyLib();
+	andromeda = new AndromedaRemote(address(lib));
+	andromeda.initialize();
+	vm.warp(1701528486);
+
+	andromeda.setMrSigner(bytes32(0x1cf2e52911410fbf3f199056a98d58795a559a2e800933f7fcd13d048462271c), true);
+
+	vm.prank(address(0x4));
+	keymgr = new KeyManagerSN(andromeda);
+	(address xPub, bytes memory att) = keymgr.offchain_Bootstrap();
+	keymgr.onchain_Bootstrap(xPub, att);
+	
+	alice = vm.addr(uint(keccak256("alice")));
+	bob = vm.addr(uint(keccak256("bob")));	
+    }
+
+    function test_leaky() public {
+	LeakyAuction auc = new LeakyAuction();
+
+	vm.prank(alice);
+	auc.submitBid(10);
+	vm.prank(bob);
+	auc.submitBid(8);
+
+	vm.roll(3);
+	auc.conclude();
+	assertEq(auc.secondPrice(), 8);
+    }
+
+    function test_sealed() public {
+	SealedAuction auc = new SealedAuction(keymgr);
+
+	// Initialize the derived public key
+	assertEq(auc.isInitialized(), false);	
+	(bytes memory dPub, bytes memory sig) =
+	    keymgr.offchain_DeriveKey(address(auc));
+	keymgr.onchain_DeriveKey(address(auc), dPub, sig);
+	assertEq(auc.isInitialized(), true);
+
+	// Submit encrypted orders
+	bytes memory aBid = auc.encryptOrder(10, bytes32(uint(0xdead2123)));
+	bytes memory bBid = auc.encryptOrder( 8, bytes32(uint(0xcafe1232)));
+	vm.prank(alice);
+	auc.submitEncrypted(aBid);
+	vm.prank(bob);
+	auc.submitEncrypted(bBid);
+
+	vm.roll(3);
+
+	// Off chain compute the solution
+	(uint secondPrice, bytes memory sig2) = auc.offline_Finalize();
+
+	// Subit the solution onchain
+	auc.onchain_Finalize(secondPrice, sig2);
+	assertEq(auc.secondPrice(), 8);
+    }
+}

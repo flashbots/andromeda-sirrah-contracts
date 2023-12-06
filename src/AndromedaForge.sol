@@ -2,29 +2,31 @@
 pragma solidity ^0.8.8;
 import "solidity-stringutils/strings.sol";
 
+import {IAndromeda} from "src/IAndromeda.sol";
+
 interface Vm {
     function ffi(string[] calldata commandInput) external view returns (bytes memory result);
     function setEnv(string calldata name, string calldata value) external;
     function envOr(string calldata key, bytes32 defaultValue) external returns (bytes32 value);
 }
 
-contract AndromedaForge {
+contract AndromedaForge is IAndromeda {
     using strings for *;
 
     bytes32 constant salt = hex"234902409284092384092384";
 
     Vm constant vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);    
 
-    function attestSgx(bytes32 tag, bytes32 msghash) public view returns (bytes memory) {
+    function attestSgx(bytes32 appData) public view returns (bytes memory) {
 	// Make a fake attestation just using a salt
-	bytes32 hash = keccak256(abi.encode(salt, msg.sender, tag, msghash));
+	bytes32 hash = keccak256(abi.encode(salt, msg.sender, appData));
 	return abi.encodePacked(hash);
     }
 
-    function verifySgx(address caller, bytes32 tag, bytes32 msghash, bytes memory att) public pure {
+    function verifySgx(address caller, bytes32 appData, bytes memory att) public pure returns(bool) {
 	// Recreate the fake attestation
-	bytes32 hash = keccak256(abi.encode(salt, caller, tag, msghash));
-	require(hash == abi.decode(att, (bytes32)));
+	bytes32 hash = keccak256(abi.encode(salt, caller, appData));
+	return hash == abi.decode(att, (bytes32));
     }
 
     function localRandom() public view returns(bytes32) {
@@ -60,10 +62,6 @@ contract AndromedaForge {
     string activeHost = "default";
     function switchHost(string memory host) public {
 	activeHost = host;
-    }
-    function resetHost(address subject) public {
-	// Reset the data for this host
-	// If 0, Host loses all their data
     }
 
     function iToHex(bytes memory buffer) public pure returns (string memory) {
