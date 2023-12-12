@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.8;
+
 import "solidity-stringutils/strings.sol";
 
 import {IAndromeda} from "src/IAndromeda.sol";
@@ -15,53 +16,53 @@ contract AndromedaForge is IAndromeda {
 
     bytes32 constant salt = hex"234902409284092384092384";
 
-    Vm constant vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);    
+    Vm constant vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
     function attestSgx(bytes32 appData) public view returns (bytes memory) {
-	// Make a fake attestation just using a salt
-	bytes32 hash = keccak256(abi.encode(salt, msg.sender, appData));
-	return abi.encodePacked(hash);
+        // Make a fake attestation just using a salt
+        bytes32 hash = keccak256(abi.encode(salt, msg.sender, appData));
+        return abi.encodePacked(hash);
     }
 
-    function verifySgx(address caller, bytes32 appData, bytes memory att) public pure returns(bool) {
-	// Recreate the fake attestation
-	bytes32 hash = keccak256(abi.encode(salt, caller, appData));
-	return hash == abi.decode(att, (bytes32));
+    function verifySgx(address caller, bytes32 appData, bytes memory att) public pure returns (bool) {
+        // Recreate the fake attestation
+        bytes32 hash = keccak256(abi.encode(salt, caller, appData));
+        return hash == abi.decode(att, (bytes32));
     }
 
-    function localRandom() public view returns(bytes32) {
+    function localRandom() public view returns (bytes32) {
         string[] memory inputs = new string[](2);
         inputs[0] = "sh";
         inputs[1] = "ffi/local_random.sh";
         bytes memory res = vm.ffi(inputs);
-	return bytes32(res);
+        return bytes32(res);
     }
 
-    function toEnv(string memory host, address caller, bytes32 tag) pure internal returns(string memory) {
-	strings.slice memory m = "SUAVE_VOLATILE_".toSlice()	
-	    .concat(iToHex(abi.encodePacked(caller)).toSlice()).toSlice()
-	    .concat("_".toSlice()).toSlice();
-	return m
-	    .concat(host.toSlice()).toSlice()
-	    .concat("_".toSlice()).toSlice()
-	    .concat(iToHex(abi.encodePacked(tag)).toSlice());
+    function toEnv(string memory host, address caller, bytes32 tag) internal pure returns (string memory) {
+        strings.slice memory m = "SUAVE_VOLATILE_".toSlice().concat(iToHex(abi.encodePacked(caller)).toSlice()).toSlice(
+        ).concat("_".toSlice()).toSlice();
+        return m.concat(host.toSlice()).toSlice().concat("_".toSlice()).toSlice().concat(
+            iToHex(abi.encodePacked(tag)).toSlice()
+        );
     }
-    
+
     function volatileSet(bytes32 tag, bytes32 value) public {
-	address caller = msg.sender;
-	string memory env = toEnv(activeHost, caller, tag);
-	vm.setEnv(env, iToHex(abi.encodePacked(value)));
+        address caller = msg.sender;
+        string memory env = toEnv(activeHost, caller, tag);
+        vm.setEnv(env, iToHex(abi.encodePacked(value)));
     }
-    function volatileGet(bytes32 tag) public returns(bytes32) {
-	address caller = msg.sender;
-	string memory env = toEnv(activeHost, caller, tag);
-	return vm.envOr(env, bytes32(""));
+
+    function volatileGet(bytes32 tag) public returns (bytes32) {
+        address caller = msg.sender;
+        string memory env = toEnv(activeHost, caller, tag);
+        return vm.envOr(env, bytes32(""));
     }
 
     // Currently active host
     string activeHost = "default";
+
     function switchHost(string memory host) public {
-	activeHost = host;
+        activeHost = host;
     }
 
     function iToHex(bytes memory buffer) public pure returns (string memory) {
@@ -70,7 +71,7 @@ contract AndromedaForge is IAndromeda {
         for (uint256 i = 0; i < buffer.length; i++) {
             converted[i * 2] = _base[uint8(buffer[i]) / _base.length];
             converted[i * 2 + 1] = _base[uint8(buffer[i]) % _base.length];
-	}
+        }
         return string(abi.encodePacked("0x", converted));
     }
 }

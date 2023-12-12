@@ -16,52 +16,50 @@ contract KeyManagerSNTest is Test {
     Vm.Wallet carol;
 
     function setUp() public {
-	andromeda = new AndromedaForge();
-	vm.prank(address(0x1));	
-	keymgr = new KeyManagerSN(andromeda);
+        andromeda = new AndromedaForge();
+        vm.prank(address(0x1));
+        keymgr = new KeyManagerSN(address(andromeda));
 
-	alice = vm.createWallet("alice");
-	bob = vm.createWallet("bob");
+        alice = vm.createWallet("alice");
+        bob = vm.createWallet("bob");
     }
 
     function testKeyManager() public {
+        // 1. Bootstrap
+        // 1a. Offchain generate the key
+        andromeda.switchHost("alice");
+        (address xPub, bytes memory att) = keymgr.offchain_Bootstrap();
+        // 1b. Post the key and attestation on-chain
+        keymgr.onchain_Bootstrap(xPub, att);
 
-	// 1. Bootstrap
-	// 1a. Offchain generate the key
-	andromeda.switchHost("alice");
-	(address xPub, bytes memory att) = keymgr.offchain_Bootstrap();
-	// 1b. Post the key and attestation on-chain
-	keymgr.onchain_Bootstrap(xPub, att);
+        // 2. Register a new node
+        // 2a. Offchain generate a register request
+        andromeda.switchHost("bob");
+        (address bob_kettle, bytes memory bPub, bytes memory attB) = keymgr.offchain_Register();
+        // 2b. Onchain submit the request
+        keymgr.onchain_Register(bob_kettle, bPub, attB);
 
-	// 2. Register a new node
-	// 2a. Offchain generate a register request
-	andromeda.switchHost("bob");
-	(address bob_kettle, bytes memory bPub, bytes memory attB) = keymgr.offchain_Register();	
-	// 2b. Onchain submit the request
-	keymgr.onchain_Register(bob_kettle, bPub, attB);
-
-	// 3. Help onboard a new node
-	// 3a. Offchain generate a ciphertext with the key
-	andromeda.switchHost("alice");
-	(bytes memory ciphertext) = keymgr.offchain_Onboard(bob_kettle);
-	// 3b. Onchain post the ciphertext
-	keymgr.onchain_Onboard(bob_kettle, ciphertext);
-	// 3c. Load the data received
-	andromeda.switchHost("bob");
-	keymgr.finish_Onboard(ciphertext);
+        // 3. Help onboard a new node
+        // 3a. Offchain generate a ciphertext with the key
+        andromeda.switchHost("alice");
+        (bytes memory ciphertext) = keymgr.offchain_Onboard(bob_kettle);
+        // 3b. Onchain post the ciphertext
+        keymgr.onchain_Onboard(bob_kettle, ciphertext);
+        // 3c. Load the data received
+        andromeda.switchHost("bob");
+        keymgr.finish_Onboard(ciphertext);
     }
 
     function testDerived() public {
-	// Do the bootstrap
-	(address xPub, bytes memory att) = keymgr.offchain_Bootstrap();
-	keymgr.onchain_Bootstrap(xPub, att);
+        // Do the bootstrap
+        (address xPub, bytes memory att) = keymgr.offchain_Bootstrap();
+        keymgr.onchain_Bootstrap(xPub, att);
 
-	// Show the derived key associated with this contract.
-	(bytes memory dPub, bytes memory sig) =
-	    keymgr.offchain_DeriveKey(address(this));
-	keymgr.onchain_DeriveKey(address(this), dPub, sig);
+        // Show the derived key associated with this contract.
+        (bytes memory dPub, bytes memory sig) = keymgr.offchain_DeriveKey(address(this));
+        keymgr.onchain_DeriveKey(address(this), dPub, sig);
 
-	bytes32 dPriv = keymgr.derivedPriv();
-	assertEq(PKE.derivePubKey(dPriv), keymgr.derivedPub(address(this)));
+        bytes32 dPriv = keymgr.derivedPriv();
+        assertEq(PKE.derivePubKey(dPriv), keymgr.derivedPub(address(this)));
     }
 }
