@@ -65,8 +65,8 @@ abstract contract KeyManagerBase {
 contract KeyManagerSN is KeyManagerBase {
     IAndromeda public Suave;
 
-    constructor(IAndromeda _Suave) {
-	Suave = _Suave;
+    constructor(address _Suave) {
+	Suave = IAndromeda(_Suave);
     }
     
     // SUAVE contract that emulates Secret Network (SN) key management
