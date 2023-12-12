@@ -65,3 +65,9 @@ $ forge build
 ```shell
 $ forge test --ffi
 ```
+
+### Format
+
+```shell
+$ forge fmt .
+```
