@@ -25,6 +25,24 @@ interface Vm {
     function projectRoot() external view returns (string memory);
 }
 
+contract Tester {
+    function configureQeIdentityJson(
+        EnclaveIdStruct.EnclaveId calldata qeIdentityInput
+    ) public {
+	//console2.log("configureQeIdentityJson");
+        //console2.logBytes(msg.data);
+    }
+    
+    function configureTcbInfoJson(
+        string calldata fmspc,
+        TCBInfoStruct.TCBInfo calldata tcbInfoInput
+    ) public {
+	//console2.log("configureTcbInfoJson");
+        //console2.logBytes(msg.data);
+    }
+    
+}
+
 contract AndromedaRemote is IAndromeda, DcapDemo {
     using strings for *;
     using stdJson for string;
@@ -34,6 +52,8 @@ contract AndromedaRemote is IAndromeda, DcapDemo {
     constructor(address sigVerifyLib) DcapDemo(sigVerifyLib) {}
 
     function initialize() public {
+	Tester t = new Tester();
+	
         // This is the dummy enclave from the service
         // https://github.com/amiller/gramine-dummy-attester/tree/dcap
         setMrEnclave(bytes32(0xdc43f8c42d8e5f52c8bbd68f426242153f0be10630ff8cca255129a3ca03d273), true);
@@ -48,19 +68,29 @@ contract AndromedaRemote is IAndromeda, DcapDemo {
         {
             string memory p = "test/fixtures/quotingenclave-identity.json";
             EnclaveIdStruct.EnclaveId memory s = parseIdentity(p);
+	    //console2.log('configureQeIdentityJson');
+	    //console2.logBytes(abi.encode(s));
             vm.prank(address(owner));
             this.configureQeIdentityJson(s);
+            t.configureQeIdentityJson(s);	    
         }
         // Load one of the TCB Infos. These are signed by Intel. But here the signature isn't checked. FIXME
         {
             TCBInfoStruct.TCBInfo memory s = parseTcbInfo("test/fixtures/tcbInfo.json");
+	    //console2.log('configureTcbInfoJson');
+	    //console2.logBytes(abi.encodePacked(s.fmspc));
+	    //console2.logBytes(abi.encode(s));
             vm.prank(address(owner));
             this.configureTcbInfoJson(s.fmspc, s);
+            t.configureTcbInfoJson(s.fmspc, s);
         }
     }
 
     function attestSgx(bytes32 appData) public view returns (bytes memory) {
-        bytes memory userReport = abi.encodePacked(bytes32(bytes20(msg.sender)), appData);
+	console2.log("attestSgx remote");
+        bytes memory userdata = abi.encode(address(this), abi.encodePacked(msg.sender, appData));
+	console2.logBytes(userdata);
+	bytes memory userReport = abi.encodePacked(sha256(userdata), uint(0));
         string[] memory inputs = new string[](3);
         inputs[0] = "python";
         inputs[1] = "ffi/ffi-fetchquote-dcap.py";
@@ -70,7 +100,10 @@ contract AndromedaRemote is IAndromeda, DcapDemo {
     }
 
     function verifySgx(address caller, bytes32 appData, bytes memory att) public view returns (bool) {
-        bytes memory userReport = abi.encodePacked(bytes32(bytes20(caller)), appData);
+	console2.log("verifySgx remote");
+	//console2.logBytes(att);
+        bytes memory userdata = abi.encode(address(this), abi.encodePacked(caller, appData));
+	bytes memory userReport = abi.encodePacked(sha256(userdata), uint(0));
         (,, V3Struct.EnclaveReport memory r,,) = V3Parser.parseInput(att);
         if (keccak256(r.reportData) != keccak256(userReport)) {
             return false;

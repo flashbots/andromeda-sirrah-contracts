@@ -28,14 +28,15 @@ contract Andromeda is IAndromeda, DcapDemo {
         return abi.decode(value, (bytes32));
     }
 
-    function attestSgx(bytes32 userdata) external override returns (bytes memory) {
-        (bool success, bytes memory attestBytes) = ATTEST_ADDR.staticcall(abi.encodePacked(userdata));
+    function attestSgx(bytes32 appData) external override returns (bytes memory) {
+        (bool success, bytes memory attestBytes) = ATTEST_ADDR.staticcall(abi.encodePacked(msg.sender, appData));
         require(success);
         return attestBytes;
     }
 
     function verifySgx(address caller, bytes32 appData, bytes memory att) public view returns (bool) {
-        bytes memory userReport = abi.encodePacked(bytes32(bytes20(caller)), appData);
+        bytes memory userdata = abi.encode(address(this), abi.encodePacked(caller, appData));
+	bytes memory userReport = abi.encodePacked(sha256(userdata), uint(0));
         (,, V3Struct.EnclaveReport memory r,,) = V3Parser.parseInput(att);
         if (keccak256(r.reportData) != keccak256(userReport)) {
             return false;
