@@ -71,3 +71,22 @@ $ forge test --ffi
 ```shell
 $ forge fmt .
 ```
+
+## Timelock encryption demo
+
+Configure the message to a (multiple of 32-bytes) string of your choice.
+This will use `cast` to encrypt it (obv this could be done locally).
+Then we post the ciphertext on Rigil.
+Later, 
+
+```bash
+TIMELOCK=0xe06c085eebaa0b8f908E7Bc931355D681391BC8e; \
+MESSAGE='ABCDE timelock test message!32xr'; \
+CIPH=$(cast call --rpc-url=https://rpc.rigil.suave.flashbots.net --chain-id=16813125 $TIMELOCK "encryptMessage(string memory message, bytes32 r)returns(bytes)" "$MESSAGE" 0x$(head -c32 /dev/urandom | xxd -p -c64)); \
+echo Ciphertext: $CIPH; \
+cast send --legacy --rpc-url=https://rpc.rigil.suave.flashbots.net --chain-id=16813125 --private-key=$(cat privkey) $TIMELOCK "submitEncrypted(bytes)" $CIPH; \
+echo Waiting for 90 seconds...; \
+sleep 90; \
+echo Fetching result:; \
+curl http://sirrah.ln.soc1024.com/decrypt/$CIPH
+```
