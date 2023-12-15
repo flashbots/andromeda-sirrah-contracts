@@ -38,6 +38,11 @@ contract AndromedaForge is IAndromeda {
         return bytes32(res);
     }
 
+    function sealingKey(bytes32 tag) public view returns (bytes32) {
+        // Make a fake sealing key just using a salt
+        return bytes32(keccak256(abi.encode(activeHost, salt, msg.sender, tag)));
+    }
+
     function toEnv(string memory host, address caller, bytes32 tag) internal pure returns (string memory) {
         strings.slice memory m = "SUAVE_VOLATILE_".toSlice().concat(iToHex(abi.encodePacked(caller)).toSlice()).toSlice(
         ).concat("_".toSlice()).toSlice();
