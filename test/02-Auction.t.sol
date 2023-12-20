@@ -24,7 +24,8 @@ contract SealedAuctionTest is Test {
 
         andromeda.setMrSigner(bytes32(0x1cf2e52911410fbf3f199056a98d58795a559a2e800933f7fcd13d048462271c), true);
 
-        vm.prank(address(0x4));
+	// To ensure we don't use the same address with volatile storage
+	vm.prank(vm.addr(uint256(keccak256("examples/Auction.t.sol"))));
         keymgr = new KeyManagerSN(address(andromeda));
         (address xPub, bytes memory att) = keymgr.offchain_Bootstrap();
         keymgr.onchain_Bootstrap(xPub, att);
