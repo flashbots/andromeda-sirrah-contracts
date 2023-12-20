@@ -95,10 +95,9 @@ contract KeyManagerSN is KeyManagerBase {
     mapping(address => bytes) registry;
 
     function offchain_Register() public returns (address, bytes memory, bytes memory) {
-        bytes32 myPriv = Suave.localRandom();
+        bytes32 myPriv = Suave.sealingKey("myPriv");
         bytes memory myPub = PKE.derivePubKey(myPriv);
         address addr = address(Secp256k1.deriveAddress(uint256(myPriv)));
-        Suave.volatileSet("myPriv", myPriv);
         bytes memory att = Suave.attestSgx(keccak256(abi.encodePacked("myPub", myPub, addr)));
         return (addr, myPub, att);
     }
@@ -124,7 +123,7 @@ contract KeyManagerSN is KeyManagerBase {
     }
 
     function finish_Onboard(bytes memory ciphertext) public {
-        bytes32 myPriv = Suave.volatileGet("myPriv");
+        bytes32 myPriv = Suave.sealingKey("myPriv");
         bytes32 xPriv_ = abi.decode(PKE.decrypt(myPriv, ciphertext), (bytes32));
         require(Secp256k1.deriveAddress(uint256(xPriv_)) == xPub);
         Suave.volatileSet("xPriv", xPriv_);

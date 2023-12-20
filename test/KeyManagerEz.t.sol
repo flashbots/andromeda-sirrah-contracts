@@ -39,6 +39,15 @@ contract KeyManagerSNTest is Test {
         // 2b. Onchain submit the request
         keymgr.onchain_Register(bob_kettle, bPub, attB);
 
+        // 2.1 Register a new node
+        // 2.1a. Offchain generate a register request
+        andromeda.switchHost("charlie");
+        (address charlie_kettle, bytes memory cPub, bytes memory attC) = keymgr.offchain_Register();
+        // 2.1b. Onchain submit the request
+        keymgr.onchain_Register(charlie_kettle, cPub, attC);
+
+        assertNotEq(bob_kettle, charlie_kettle);
+
         // 3. Help onboard a new node
         // 3a. Offchain generate a ciphertext with the key
         andromeda.switchHost("alice");
@@ -47,6 +56,14 @@ contract KeyManagerSNTest is Test {
         keymgr.onchain_Onboard(bob_kettle, ciphertext);
         // 3c. Load the data received
         andromeda.switchHost("bob");
+        keymgr.finish_Onboard(ciphertext);
+
+        // 3.1. Help onboard a second node
+        ciphertext = keymgr.offchain_Onboard(charlie_kettle);
+        // 3.1b. Onchain post the ciphertext
+        keymgr.onchain_Onboard(charlie_kettle, ciphertext);
+        // 3.1c. Load the data received
+        andromeda.switchHost("charlie");
         keymgr.finish_Onboard(ciphertext);
     }
 
