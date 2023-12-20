@@ -1,7 +1,7 @@
 import json
 import sys
 import urllib.request
-import eth_abi
+#import eth_abi
 import base64
 from binascii import hexlify
 
