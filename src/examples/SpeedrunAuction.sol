@@ -1,7 +1,7 @@
 pragma solidity ^0.8.13;
 
-import "./crypto/secp256k1.sol";
-import "./crypto/encryption.sol";
+import "../crypto/secp256k1.sol";
+import "../crypto/encryption.sol";
 
 import {AndromedaForge} from "src/AndromedaForge.sol";
 import {Secp256k1} from "src/crypto/secp256k1.sol";

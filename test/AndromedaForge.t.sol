@@ -17,6 +17,14 @@ contract AndromedaForgeTest is Test {
         require(a != b);
     }
 
+    function test_sealingkey() public view {
+        bytes32 msghash = keccak256(abi.encodePacked("hi"));
+
+        bytes32 a = andromeda.sealingKey(msghash);
+        bytes32 b = andromeda.sealingKey(msghash);
+        require(a == b);
+    }
+
     function test_attest() public {
         bytes32 msghash = keccak256(abi.encodePacked("hi"));
 

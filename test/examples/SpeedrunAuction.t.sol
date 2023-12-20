@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import {AndromedaForge} from "../src/AndromedaForge.sol";
+import {AndromedaForge} from "src/AndromedaForge.sol";
 import {Test, console2} from "forge-std/Test.sol";
-import {LeakyAuction, SealedAuction} from "../src/01-Auction.sol";
+import {LeakyAuction, SealedAuction} from "src/examples/SpeedrunAuction.sol";
 
-contract SimpleAuctionTest is Test {
+contract SpeedrunAuction is Test {
     AndromedaForge andromeda;
 
     address alice;
@@ -13,7 +13,6 @@ contract SimpleAuctionTest is Test {
 
     function setUp() public {
         andromeda = new AndromedaForge();
-        vm.prank(address(0x4));
 
         alice = vm.addr(uint256(keccak256("alice")));
         bob = vm.addr(uint256(keccak256("bob")));
@@ -33,6 +32,7 @@ contract SimpleAuctionTest is Test {
     }
 
     function test_sealed() public {
+        vm.prank(address(vm.addr(uint(keccak256("SpeedrunAuction.t.sol")))));
         SealedAuction auc = new SealedAuction(andromeda);
 
         // Have a Kettle initialize the key

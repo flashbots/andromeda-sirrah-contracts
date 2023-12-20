@@ -6,8 +6,12 @@ import {Secp256k1} from "src/crypto/secp256k1.sol";
 import {PKE, Curve} from "src/crypto/encryption.sol";
 
 abstract contract KeyManagerBase {
+    // This base class provides the functionality of a singleton
+    // Private Key holder. It allows many applications to share the
+    // same bootstrapped instance.
+
     // Anyone can see the master public key
-    address xPub;
+    address public xPub;
 
     // Attestation is now possible using the caller as domain
     // separator
@@ -21,12 +25,17 @@ abstract contract KeyManagerBase {
         return Secp256k1.verify(xPub, digest, sig);
     }
 
-    // Key derivation for encryption
-
+    //////////////////////////////////
+    // To be implemented by subclasses
+    //////////////////////////////////
+    
     // Only the contract in confidential mode can access the
     // master private key
     function xPriv() internal virtual returns (bytes32);
+    
 
+    // Key derivation for encryption
+    
     // Any contract in confidential mode can request a
     // hardened derived key
     function _derivedPriv(address a) public returns (bytes32) {
@@ -61,7 +70,7 @@ abstract contract KeyManagerBase {
     }
 }
 
-contract KeyManagerSN is KeyManagerBase {
+contract KeyManager_v0 is KeyManagerBase {
     IAndromeda public Suave;
 
     constructor(address _Suave) {
@@ -95,10 +104,9 @@ contract KeyManagerSN is KeyManagerBase {
     mapping(address => bytes) registry;
 
     function offchain_Register() public returns (address, bytes memory, bytes memory) {
-        bytes32 myPriv = Suave.localRandom();
+        bytes32 myPriv = Suave.sealingKey("myPriv");
         bytes memory myPub = PKE.derivePubKey(myPriv);
         address addr = address(Secp256k1.deriveAddress(uint256(myPriv)));
-        Suave.volatileSet("myPriv", myPriv);
         bytes memory att = Suave.attestSgx(keccak256(abi.encodePacked("myPub", myPub, addr)));
         return (addr, myPub, att);
     }
@@ -124,7 +132,7 @@ contract KeyManagerSN is KeyManagerBase {
     }
 
     function finish_Onboard(bytes memory ciphertext) public {
-        bytes32 myPriv = Suave.volatileGet("myPriv");
+        bytes32 myPriv = Suave.sealingKey("myPriv");
         bytes32 xPriv_ = abi.decode(PKE.decrypt(myPriv, ciphertext), (bytes32));
         require(Secp256k1.deriveAddress(uint256(xPriv_)) == xPub);
         Suave.volatileSet("xPriv", xPriv_);

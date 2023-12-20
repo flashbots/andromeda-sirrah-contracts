@@ -2,14 +2,14 @@
 pragma solidity ^0.8.13;
 
 import {Test, console2} from "forge-std/Test.sol";
-import {KeyManagerSN} from "../src/02-KeyManagerEz.sol";
+import {KeyManager_v0} from "../src/KeyManager.sol";
 import {PKE} from "../src/crypto/encryption.sol";
 import {AndromedaForge} from "src/AndromedaForge.sol";
 import "forge-std/Vm.sol";
 
-contract KeyManagerSNTest is Test {
+contract KeyManager_v0_Test is Test {
     AndromedaForge andromeda;
-    KeyManagerSN keymgr;
+    KeyManager_v0 keymgr;
 
     Vm.Wallet alice;
     Vm.Wallet bob;
@@ -17,8 +17,8 @@ contract KeyManagerSNTest is Test {
 
     function setUp() public {
         andromeda = new AndromedaForge();
-        vm.prank(address(0x1));
-        keymgr = new KeyManagerSN(address(andromeda));
+        vm.prank(vm.addr(uint(keccak256("KeyManager.t.sol"))));
+        keymgr = new KeyManager_v0(address(andromeda));
 
         alice = vm.createWallet("alice");
         bob = vm.createWallet("bob");
@@ -39,6 +39,15 @@ contract KeyManagerSNTest is Test {
         // 2b. Onchain submit the request
         keymgr.onchain_Register(bob_kettle, bPub, attB);
 
+        // 2.1 Register a new node
+        // 2.1a. Offchain generate a register request
+        andromeda.switchHost("charlie");
+        (address charlie_kettle, bytes memory cPub, bytes memory attC) = keymgr.offchain_Register();
+        // 2.1b. Onchain submit the request
+        keymgr.onchain_Register(charlie_kettle, cPub, attC);
+
+        assertNotEq(bob_kettle, charlie_kettle);
+
         // 3. Help onboard a new node
         // 3a. Offchain generate a ciphertext with the key
         andromeda.switchHost("alice");
@@ -47,6 +56,14 @@ contract KeyManagerSNTest is Test {
         keymgr.onchain_Onboard(bob_kettle, ciphertext);
         // 3c. Load the data received
         andromeda.switchHost("bob");
+        keymgr.finish_Onboard(ciphertext);
+
+        // 3.1. Help onboard a second node
+        ciphertext = keymgr.offchain_Onboard(charlie_kettle);
+        // 3.1b. Onchain post the ciphertext
+        keymgr.onchain_Onboard(charlie_kettle, ciphertext);
+        // 3.1c. Load the data received
+        andromeda.switchHost("charlie");
         keymgr.finish_Onboard(ciphertext);
     }
 
