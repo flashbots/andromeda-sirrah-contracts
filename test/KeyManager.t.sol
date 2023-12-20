@@ -2,14 +2,14 @@
 pragma solidity ^0.8.13;
 
 import {Test, console2} from "forge-std/Test.sol";
-import {KeyManagerSN} from "../src/02-KeyManagerEz.sol";
+import {KeyManager_v0} from "../src/KeyManager.sol";
 import {PKE} from "../src/crypto/encryption.sol";
 import {AndromedaForge} from "src/AndromedaForge.sol";
 import "forge-std/Vm.sol";
 
-contract KeyManagerSNTest is Test {
+contract KeyManager_v0_Test is Test {
     AndromedaForge andromeda;
-    KeyManagerSN keymgr;
+    KeyManager_v0 keymgr;
 
     Vm.Wallet alice;
     Vm.Wallet bob;
@@ -17,8 +17,8 @@ contract KeyManagerSNTest is Test {
 
     function setUp() public {
         andromeda = new AndromedaForge();
-        vm.prank(address(0x1));
-        keymgr = new KeyManagerSN(address(andromeda));
+        vm.prank(vm.addr(uint(keccak256("KeyManager.t.sol"))));
+        keymgr = new KeyManager_v0(address(andromeda));
 
         alice = vm.createWallet("alice");
         bob = vm.createWallet("bob");

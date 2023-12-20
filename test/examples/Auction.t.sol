@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import {AndromedaRemote} from "../src/AndromedaRemote.sol";
+import {AndromedaRemote} from "src/AndromedaRemote.sol";
 import {SigVerifyLib} from "automata-dcap-v3-attestation/utils/SigVerifyLib.sol";
 
 import {Test, console2} from "forge-std/Test.sol";
-import "../src/crypto/secp256k1.sol";
-import {KeyManagerSN} from "../src/02-KeyManagerEz.sol";
-import {LeakyAuction, SealedAuction, PKE, Curve} from "../src/02-Auction.sol";
+
+import {KeyManager_v0} from "src/KeyManager.sol";
+import {LeakyAuction, SealedAuction, PKE, Curve} from "src/examples/Auction.sol";
 
 contract SealedAuctionTest is Test {
     AndromedaRemote andromeda;
-    KeyManagerSN keymgr;
+    KeyManager_v0 keymgr;
 
     address alice;
     address bob;
@@ -26,7 +26,7 @@ contract SealedAuctionTest is Test {
 
 	// To ensure we don't use the same address with volatile storage
 	vm.prank(vm.addr(uint256(keccak256("examples/Auction.t.sol"))));
-        keymgr = new KeyManagerSN(address(andromeda));
+        keymgr = new KeyManager_v0(address(andromeda));
         (address xPub, bytes memory att) = keymgr.offchain_Bootstrap();
         keymgr.onchain_Bootstrap(xPub, att);
 

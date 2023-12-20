@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import {AndromedaRemote} from "../src/AndromedaRemote.sol";
+import {AndromedaRemote} from "src/AndromedaRemote.sol";
 import {SigVerifyLib} from "automata-dcap-v3-attestation/utils/SigVerifyLib.sol";
 
 import {Test, console2} from "forge-std/Test.sol";
-import "../src/crypto/secp256k1.sol";
-import {KeyManagerSN} from "../src/02-KeyManagerEz.sol";
-import {PKE, Curve} from "../src/02-Auction.sol";
-import {Timelock} from "../src/03-Timelock.sol";
+import "src/crypto/secp256k1.sol";
+import {KeyManager_v0} from "src/KeyManager.sol";
+import {PKE, Curve} from "src/crypto/encryption.sol";
+import {Timelock} from "src/examples/Timelock.sol";
 
 contract TimelockTest is Test {
     AndromedaRemote andromeda;
-    KeyManagerSN keymgr;
+    KeyManager_v0 keymgr;
 
     address alice;
     address bob;
@@ -27,7 +27,7 @@ contract TimelockTest is Test {
 
 	// To ensure we don't use the same address with volatile storage
 	vm.prank(vm.addr(uint256(keccak256("examples/Timelock.t.sol"))));
-        keymgr = new KeyManagerSN(address(andromeda));
+        keymgr = new KeyManager_v0(address(andromeda));
         (address xPub, bytes memory att) = keymgr.offchain_Bootstrap();
         keymgr.onchain_Bootstrap(xPub, att);
 

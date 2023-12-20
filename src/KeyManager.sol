@@ -6,8 +6,12 @@ import {Secp256k1} from "src/crypto/secp256k1.sol";
 import {PKE, Curve} from "src/crypto/encryption.sol";
 
 abstract contract KeyManagerBase {
+    // This base class provides the functionality of a singleton
+    // Private Key holder. It allows many applications to share the
+    // same bootstrapped instance.
+
     // Anyone can see the master public key
-    address xPub;
+    address public xPub;
 
     // Attestation is now possible using the caller as domain
     // separator
@@ -21,12 +25,17 @@ abstract contract KeyManagerBase {
         return Secp256k1.verify(xPub, digest, sig);
     }
 
-    // Key derivation for encryption
-
+    //////////////////////////////////
+    // To be implemented by subclasses
+    //////////////////////////////////
+    
     // Only the contract in confidential mode can access the
     // master private key
     function xPriv() internal virtual returns (bytes32);
+    
 
+    // Key derivation for encryption
+    
     // Any contract in confidential mode can request a
     // hardened derived key
     function _derivedPriv(address a) public returns (bytes32) {
@@ -61,7 +70,7 @@ abstract contract KeyManagerBase {
     }
 }
 
-contract KeyManagerSN is KeyManagerBase {
+contract KeyManager_v0 is KeyManagerBase {
     IAndromeda public Suave;
 
     constructor(address _Suave) {
