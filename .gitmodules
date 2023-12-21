@@ -13,3 +13,6 @@
 [submodule "lib/automata-dcap-v3-attestation"]
 	path = lib/automata-dcap-v3-attestation
 	url = https://github.com/amiller/automata-dcap-v3-attestation
+[submodule "lib/sgx-tcbInfos"]
+	path = lib/sgx-tcbInfos
+	url = git@github.com:Ruteri/sgx-tcbInfos.git
