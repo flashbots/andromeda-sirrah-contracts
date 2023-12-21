@@ -53,9 +53,9 @@ contract Andromeda is IAndromeda, DcapDemo {
     }
 
     function sealingKey(bytes32 key) external view returns (bytes32) {
-        (bool success, bytes memory sealingBytes) = SEALINGKEY_ADDR.staticcall(abi.encodePacked((key)));
+        (bool success, bytes memory sealingBytes) = SEALINGKEY_ADDR.staticcall("");
         require(success);
         require(sealingBytes.length == 32);
-        return bytes32(sealingBytes);
+        return bytes32(keccak256(abi.encode(bytes32(sealingBytes), key)));
     }
 }
