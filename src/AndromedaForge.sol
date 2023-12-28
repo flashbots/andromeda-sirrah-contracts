@@ -20,13 +20,13 @@ contract AndromedaForge is IAndromeda {
 
     function attestSgx(bytes32 appData) public view returns (bytes memory) {
         // Make a fake attestation just using a salt
-        bytes32 hash = keccak256(abi.encode(salt, msg.sender, appData));
+        bytes32 hash = keccak256(abi.encode(salt, codehash(), msg.sender, appData));
         return abi.encodePacked(hash);
     }
 
-    function verifySgx(address caller, bytes32 appData, bytes memory att) public pure returns (bool) {
+    function verifySgx(address caller, bytes32 appData, bytes memory att) public view returns (bool) {
         // Recreate the fake attestation
-        bytes32 hash = keccak256(abi.encode(salt, caller, appData));
+        bytes32 hash = keccak256(abi.encode(salt, codehash(), caller, appData));
         return hash == abi.decode(att, (bytes32));
     }
 
@@ -40,15 +40,19 @@ contract AndromedaForge is IAndromeda {
 
     function sealingKey(bytes32 tag) public view returns (bytes32) {
         // Make a fake sealing key just using a salt
-        return bytes32(keccak256(abi.encode(activeHost, salt, msg.sender, tag)));
+        return bytes32(keccak256(abi.encode(codehash(), activeHost, salt, msg.sender, tag)));
     }
 
-    function toEnv(string memory host, address caller, bytes32 tag) internal pure returns (string memory) {
-        strings.slice memory m = "SUAVE_VOLATILE_".toSlice().concat(iToHex(abi.encodePacked(caller)).toSlice()).toSlice(
-        ).concat("_".toSlice()).toSlice();
-        return m.concat(host.toSlice()).toSlice().concat("_".toSlice()).toSlice().concat(
-            iToHex(abi.encodePacked(tag)).toSlice()
-        );
+    function toEnv(string memory host, address caller, bytes32 tag) internal view returns (string memory m) {
+	// SUAVE_VOLATILE_{codehash}_{host}_{caller}_{tag}
+	m = string.concat("SUAVE_VOLATILE_", iToHex(abi.encodePacked(codehash())));
+        m = string.concat(m, "_"); m = string.concat(m, host);	
+	m = string.concat(m, "_"); m = string.concat(m, iToHex(abi.encodePacked(caller)));
+	m = string.concat(m, "_"); m = string.concat(m, iToHex(abi.encodePacked(tag)));
+    }
+
+    function codehash() internal view returns(bytes32 h) {
+	assembly { h := extcodehash(address()) }
     }
 
     function volatileSet(bytes32 tag, bytes32 value) public {
