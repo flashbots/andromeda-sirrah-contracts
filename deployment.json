@@ -1,0 +1,10 @@
+{
+  "RPC_URL": "https://rpc.rigil.suave.flashbots.net",
+  "PRIVATE_KEY": "",
+  "TCB_INFO_FILE": "lib/automata-dcap-v3-attestation/contracts/assets/tcbInfo2.json",
+  "QE_IDENTITY_FILE": "lib/automata-dcap-v3-attestation/contracts/assets/identity.json",
+  "SIGVERIFY_LIB_ARTIFACT": "out/SigVerifyLib.sol/SigVerifyLib.json",
+  "ANDROMEDA_ARTIFACT": "out/Andromeda.sol/Andromeda.json",
+  "KEY_MANAGER_SN_ARTIFACT": "out/KeyManager.sol/KeyManager_v0.json",
+  "ADDR_OVERRIDES": {}
+}

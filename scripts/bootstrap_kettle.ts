@@ -3,7 +3,9 @@ import fs from 'fs';
 
 import { ethers, JsonRpcProvider } from "ethers";
 
-import { LocalConfig, attach_artifact, deploy_artifact, ADDR_OVERRIDES } from "./common.ts"
+import { attach_artifact, deploy_artifact, sendToKettle} from "./common.ts"
+
+import * as LocalConfig from '../deployment.json'
 
 async function main() {
   const socket = net.connect({port: "5556"});
@@ -17,8 +19,8 @@ async function main() {
   const wallet = new ethers.Wallet(LocalConfig.PRIVATE_KEY, provider);
 
   /* Assumes andromeda is configured, might not be */
-  const Andromeda = await attach_artifact(LocalConfig.ANDROMEDA_ARTIFACT, wallet, ADDR_OVERRIDES[LocalConfig.ANDROMEDA_ARTIFACT]);
-  const KM = await deploy_artifact(LocalConfig.KEY_MANAGER_SN_ARTIFACT, wallet, Andromeda.target);
+  const Andromeda = await attach_artifact(LocalConfig.ANDROMEDA_ARTIFACT, wallet, LocalConfig.ADDR_OVERRIDES[LocalConfig.ANDROMEDA_ARTIFACT]);
+  const [KM, _] = await deploy_artifact(LocalConfig.KEY_MANAGER_SN_ARTIFACT, wallet, Andromeda.target);
 
   let keyManagerPub = await KM.xPub();
   if (keyManagerPub !== "0x0000000000000000000000000000000000000000") {
@@ -43,17 +45,3 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
-/* Utils */
-async function sendToKettle(s: net.Socket, cmd: string): Promise<string> {
-  return new Promise((resolve) => {
-    let outBuf = "";
-    s.on('data', function(b) {
-      outBuf += b.toString("utf-8");
-      if (outBuf.endsWith("\n")) {
-        resolve(outBuf.trim().replace(/^"|"$/gm,''));
-      }
-    });
-    s.write(cmd+"\n");
-  });
-}
