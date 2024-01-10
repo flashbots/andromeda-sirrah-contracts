@@ -83,7 +83,6 @@ contract KeyManager_v0 is KeyManagerBase {
     // 1. Bootstrap phase
     function offchain_Bootstrap() public returns (address _xPub, bytes memory att) {
         bytes32 xPriv_ = Suave.localRandom();
-        //bytes32 xPriv_ = bytes32(0xc0556a063cd234bbda7cbf93fdae2511238353f7dfe912edd27a08f0efc0cb61);
         _xPub = Secp256k1.deriveAddress(uint256(xPriv_));
         Suave.volatileSet("xPriv", xPriv_);
         att = Suave.attestSgx(keccak256(abi.encodePacked("xPub", _xPub)));
@@ -103,7 +102,7 @@ contract KeyManager_v0 is KeyManagerBase {
     // Mapping to nonzero indicates valid Kettle
     mapping(address => bytes) registry;
 
-    function offchain_Register() public returns (address, bytes memory, bytes memory) {
+    function offchain_Register() public returns (address addr, bytes memory myPub, bytes memory att) {
         bytes32 myPriv = Suave.sealingKey("myPriv");
         bytes memory myPub = PKE.derivePubKey(myPriv);
         address addr = address(Secp256k1.deriveAddress(uint256(myPriv)));

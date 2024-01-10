@@ -16,3 +16,6 @@ docs/
 # Editors
 *~
 #*#
+
+# Vendor
+node_modules/
