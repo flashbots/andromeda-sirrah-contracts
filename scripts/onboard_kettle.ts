@@ -9,7 +9,6 @@ import * as LocalConfig from '../deployment.json'
 
 async function main() {
   const new_kettle_socket = net.connect({port: "5557"});
-  const registered_kettle_socket = net.connect({port: "5556"});
 
   const provider = new JsonRpcProvider(LocalConfig.RPC_URL);
   const wallet = new ethers.Wallet(LocalConfig.PRIVATE_KEY, provider);
@@ -33,27 +32,44 @@ async function main() {
   
   const offchainRegisterResult = KM.interface.decodeFunctionResult(KM.offchain_Register.fragment, executionResult.Success.output.Call).toObject();
 
-  const onchainRegisterTx = await (await KM.onchain_Register(offchainRegisterResult.addr, offchainRegisterResult.myPub, offchainRegisterResult.att)).wait();
-  console.log("registered "+offchainRegisterResult.addr+" in "+onchainRegisterTx.hash);
+  let ciphertext = null;
+  const onboard_event = (await KM.queryFilter("Onboard", 0))
+    .map((e) => KM.interface.decodeEventLog("Onboard", e.data, e.topics))
+    .filter((e) => e[0] === offchainRegisterResult.addr).pop();
 
-  resp = await sendToKettle(registered_kettle_socket, "advance");
-  if (resp !== 'advanced') {
-    throw("kettle did not advance, refusing to continue: "+resp);
+  if (onboard_event) {
+    console.log("onboard event for "+offchainRegisterResult.addr+" exists, skip registering ");
+
+    ciphertext = onboard_event[1];
+  } else {
+    const registered_kettle_socket = net.connect({port: "5556"});
+
+    const onchainRegisterTx = await (await KM.onchain_Register(offchainRegisterResult.addr, offchainRegisterResult.myPub, offchainRegisterResult.att)).wait();
+    console.log("registered "+offchainRegisterResult.addr+" in "+onchainRegisterTx.hash);
+
+    resp = await sendToKettle(registered_kettle_socket, "advance");
+    if (resp !== 'advanced') {
+      throw("kettle did not advance, refusing to continue: "+resp);
+    }
+
+    const onboardTxData = await KM.offchain_Onboard.populateTransaction(offchainRegisterResult.addr);
+    resp = await sendToKettle(registered_kettle_socket, 'execute {"caller":"0x0000000000000000000000000000000000000000","gas_limit":21000000,"gas_price":"0x0","transact_to":{"Call":"'+onboardTxData.to+'"},"value":"0x0","data":"'+onboardTxData.data+'","nonce":0,"chain_id":null,"access_list":[],"gas_priority_fee":null,"blob_hashes":[],"max_fee_per_blob_gas":null}');
+
+    executionResult = JSON.parse(resp);
+    if (executionResult.Success === undefined) {
+      throw("execution did not succeed: "+JSON.stringify(resp));
+    }
+
+    const offchainOnboardResult = KM.interface.decodeFunctionResult(KM.offchain_Onboard.fragment, executionResult.Success.output.Call).toObject();
+
+    const onchainOnboardTx = await (await KM.onchain_Onboard(offchainRegisterResult.addr, offchainOnboardResult.ciphertext)).wait();
+
+    console.log("submitted onboard ciphertext for "+offchainRegisterResult.addr+" in "+onchainOnboardTx.hash);
+
+    ciphertext = offchainOnboardResult.ciphertext;
   }
 
-  const onboardTxData = await KM.offchain_Onboard.populateTransaction(offchainRegisterResult.addr);
-  resp = await sendToKettle(registered_kettle_socket, 'execute {"caller":"0x0000000000000000000000000000000000000000","gas_limit":21000000,"gas_price":"0x0","transact_to":{"Call":"'+onboardTxData.to+'"},"value":"0x0","data":"'+onboardTxData.data+'","nonce":0,"chain_id":null,"access_list":[],"gas_priority_fee":null,"blob_hashes":[],"max_fee_per_blob_gas":null}');
-
-  executionResult = JSON.parse(resp);
-  if (executionResult.Success === undefined) {
-    throw("execution did not succeed: "+JSON.stringify(resp));
-  }
-
-  const offchainOnboardResult = KM.interface.decodeFunctionResult(KM.offchain_Onboard.fragment, executionResult.Success.output.Call).toObject();
-
-  const onchainOnboardTx = await (await KM.onchain_Onboard(offchainRegisterResult.addr, offchainOnboardResult.ciphertext)).wait();
-
-  const finishOnboardTxData = await KM.finish_Onboard.populateTransaction(offchainOnboardResult.ciphertext);
+  const finishOnboardTxData = await KM.finish_Onboard.populateTransaction(ciphertext);
   resp = await sendToKettle(new_kettle_socket, 'execute {"caller":"0x0000000000000000000000000000000000000000","gas_limit":21000000,"gas_price":"0x0","transact_to":{"Call":"'+finishOnboardTxData.to+'"},"value":"0x0","data":"'+finishOnboardTxData.data+'","nonce":0,"chain_id":null,"access_list":[],"gas_priority_fee":null,"blob_hashes":[],"max_fee_per_blob_gas":null}');
   
   executionResult = JSON.parse(resp);
@@ -61,7 +77,7 @@ async function main() {
     throw("execution did not succeed: "+JSON.stringify(resp));
   }
 
-  console.log("onboarded "+offchainRegisterResult.addr+" in "+onchainOnboardTx.hash);
+  console.log("onboarded "+offchainRegisterResult.addr);
 }
 
 main().catch((error) => {
