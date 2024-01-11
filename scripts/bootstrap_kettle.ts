@@ -1,5 +1,4 @@
 import net from "net";
-import fs from 'fs';
 
 import { ethers, JsonRpcProvider } from "ethers";
 
