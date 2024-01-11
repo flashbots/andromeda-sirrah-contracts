@@ -37,7 +37,7 @@ contract Andromeda is IAndromeda, DcapDemo {
 
     function verifySgx(address caller, bytes32 appData, bytes memory att) public view returns (bool) {
         bytes memory userdata = abi.encode(address(this), abi.encodePacked(caller, appData));
-	bytes memory userReport = abi.encodePacked(sha256(userdata), uint(0));
+        bytes memory userReport = abi.encodePacked(sha256(userdata), uint(0));
         (,, V3Struct.EnclaveReport memory r,,) = V3Parser.parseInput(att);
         if (keccak256(r.reportData) != keccak256(userReport)) {
             return false;
