@@ -48,7 +48,7 @@ contract SealedAuctionTest is Test {
     }
 
     function test_sealed() public {
-        SealedAuction auc = new SealedAuction(keymgr);
+        SealedAuction auc = new SealedAuction(keymgr, 2);
 
         // Initialize the derived public key
         assertEq(auc.isInitialized(), false);
@@ -67,7 +67,7 @@ contract SealedAuctionTest is Test {
         vm.roll(3);
 
         // Off chain compute the solution
-        (uint256 secondPrice, bytes memory sig2) = auc.offline_Finalize();
+        (uint256 secondPrice, bytes memory sig2) = auc.offchain_Finalize();
 
         // Subit the solution onchain
         auc.onchain_Finalize(secondPrice, sig2);

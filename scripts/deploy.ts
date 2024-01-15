@@ -13,7 +13,7 @@ async function deploy() {
   const provider = new JsonRpcProvider(LocalConfig.RPC_URL);
   const wallet = new ethers.Wallet(LocalConfig.PRIVATE_KEY, provider);
 
-  const [SigVerifyLib, _] = await deploy_artifact(LocalConfig.SIGVERIFY_LIB_ARTIFACT, wallet);
+  const [SigVerifyLib,] = await deploy_artifact(LocalConfig.SIGVERIFY_LIB_ARTIFACT, wallet);
   const [Andromeda, andomedaFound] = await deploy_artifact(LocalConfig.ANDROMEDA_ARTIFACT, wallet, SigVerifyLib.target);
 
   if (andomedaFound) { 
@@ -29,7 +29,7 @@ async function deploy() {
     console.log("configured tcbInfo in "+tcbInfoTx.hash);
   }
 
-  const KeyManagerSN = await deploy_artifact(LocalConfig.KEY_MANAGER_SN_ARTIFACT, wallet, Andromeda.target);
+  const [KeyManagerSN,] = await deploy_artifact(LocalConfig.KEY_MANAGER_SN_ARTIFACT, wallet, Andromeda.target);
 }
 
 deploy().catch((error) => {

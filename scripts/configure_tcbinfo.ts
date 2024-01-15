@@ -8,17 +8,19 @@ import { attach_artifact } from "./common.ts"
 import * as LocalConfig from '../deployment.json'
 
 async function main() {
-  const tcbInfoFolder = process.env.TCB_INFO_FOLDER.trim();
+  const tcbInfoFiles = (process.env.TCB_INFO_FILES ?? '').trim().split(" ");
+  
+  if (tcbInfoFiles.length === 0) {
+    throw new Error("TCB_INFO_FILES environment variable is not defined.");
+  }
 
   const provider = new JsonRpcProvider(LocalConfig.RPC_URL);
   const wallet = new ethers.Wallet(LocalConfig.PRIVATE_KEY, provider);
 
   const Andromeda = await attach_artifact(LocalConfig.ANDROMEDA_ARTIFACT, wallet, LocalConfig.ADDR_OVERRIDES[LocalConfig.ANDROMEDA_ARTIFACT]);
 
-  for (const folder of fs.readdirSync(tcbInfoFolder)) {    
-    const tcbInfoFile = fs.readdirSync(tcbInfoFolder+"/"+folder).filter(file => file.endsWith(".json"))[0];
-    const tcbInfo = JSON.parse(fs.readFileSync(tcbInfoFolder+"/"+folder+"/"+tcbInfoFile, 'utf8')) as TCBInfoStruct.TCBInfoStruct.tcbInfo;
-
+  for (const tcbInfoFile in tcbInfoFiles) {
+    const tcbInfo = JSON.parse(fs.readFileSync(tcbInfoFiles[tcbInfoFile], 'utf8')) as TCBInfoStruct.TCBInfoStruct.tcbInfo;
     const isAlreadyDeployed = (await Andromeda.tcbInfo(tcbInfo.fmspc))[1] === tcbInfo.fmspc;
     if (!isAlreadyDeployed) {
       const tcbInfoTx = await (await Andromeda.configureTcbInfoJson(tcbInfo.fmspc, tcbInfo)).wait();
