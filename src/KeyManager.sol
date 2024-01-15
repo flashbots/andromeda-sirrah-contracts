@@ -38,7 +38,7 @@ abstract contract KeyManagerBase {
     
     // Any contract in confidential mode can request a
     // hardened derived key
-    function _derivedPriv(address a) public returns (bytes32) {
+    function _derivedPriv(address a) private returns (bytes32) {
         return keccak256(abi.encodePacked(a, xPriv()));
     }
 
