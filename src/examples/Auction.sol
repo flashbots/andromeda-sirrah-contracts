@@ -9,8 +9,12 @@ contract LeakyAuction {
     // All Deposits in before trade
     mapping(address => uint256) public balance;
 
+    constructor() {
+        auctionEndTime = 2;
+    }
+
     // Concluding time (block height)
-    uint256 public constant auctionEndTime = 2;
+    uint256 public auctionEndTime;
 
     // To be set after the auction concludes (this is the output)
     uint256 public secondPrice;
@@ -55,9 +59,18 @@ contract LeakyAuction {
 contract SealedAuction is LeakyAuction {
     KeyManager_v0 keymgr;
 
-    constructor(KeyManager_v0 _keymgr) {
+    constructor(KeyManager_v0 _keymgr, uint delay_blocks) {
         keymgr = _keymgr;
+        auctionEndTime = block.number + delay_blocks;
     }
+
+    // Dumb workaround because we don't have the block environment yet
+    uint public blocknumber;
+    function number() public view returns(uint) {
+	if (block.number > blocknumber) return block.number;
+	return blocknumber;
+    }
+    function advance() public { blocknumber = block.number; }
 
     /*
     To initialize `SealedAuction auc`, some Kettle must invoke:
@@ -87,8 +100,8 @@ contract SealedAuction is LeakyAuction {
     }
 
     // Called by any kettle to compute the second price
-    function offline_Finalize() public returns (uint256 secondPrice_, bytes memory att) {
-        require(block.number > auctionEndTime);
+    function offchain_Finalize() public returns (uint256 secondPrice_, bytes memory att) {
+        require(number() > auctionEndTime);
 
         // Store our local key
         bytes32 dPriv = keymgr.derivedPriv();

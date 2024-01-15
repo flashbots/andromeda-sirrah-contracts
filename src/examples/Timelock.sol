@@ -46,7 +46,7 @@ contract Timelock {
     }
 
     // Decrypt the message if the block height is high enough
-    function decrypt(bytes memory ciphertext) public returns (bytes memory) {
+    function decrypt(bytes memory ciphertext) public returns (bytes memory message) {
 	bytes32 contentHash = keccak256(ciphertext);
 	require(deadlines[contentHash] != 0);
 	require(number() >= deadlines[contentHash]);

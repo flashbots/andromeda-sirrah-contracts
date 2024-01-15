@@ -6,6 +6,18 @@ build:
 deploy: build
 	npx ts-node -T scripts/deploy.ts
 
+.PHONY: bootstrap
+bootstrap: build
+	npx ts-node -T scripts/bootstrap_kettle.ts
+
+.PHONY: onboard
+onboard: build
+	npx ts-node -T scripts/onboard_kettle.ts
+
+.PHONY: test_examples
+onboard: build
+	npx ts-node -T scripts/test_examples.ts
+
 .PHONY: configure_all_tcbinfos
 configure_all_tcbinfos:
 	# Non-PHONY! If needed, clear it manually

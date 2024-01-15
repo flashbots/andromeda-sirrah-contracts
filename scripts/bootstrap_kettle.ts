@@ -2,14 +2,14 @@ import net from "net";
 
 import { ethers, JsonRpcProvider } from "ethers";
 
-import { attach_artifact, deploy_artifact, sendToKettle} from "./common.ts"
+import { attach_artifact, deploy_artifact, kettle_execute, kettle_advance} from "./common.ts"
 
 import * as LocalConfig from '../deployment.json'
 
 async function main() {
   const socket = net.connect({port: "5556"});
 
-  let resp = await sendToKettle(socket, "advance");
+  let resp = await kettle_advance(socket);
   if (resp !== 'advanced') {
     throw("kettle did not advance, refusing to continue: "+resp);
   }
@@ -27,7 +27,7 @@ async function main() {
   }
 
   const bootstrapTxData = await KM.offchain_Bootstrap.populateTransaction();
-  resp = await sendToKettle(socket, 'execute {"caller":"0x0000000000000000000000000000000000000000","gas_limit":21000000,"gas_price":"0x0","transact_to":{"Call":"'+bootstrapTxData.to+'"},"value":"0x0","data":"'+bootstrapTxData.data+'","nonce":0,"chain_id":null,"access_list":[],"gas_priority_fee":null,"blob_hashes":[],"max_fee_per_blob_gas":null}');
+  resp = await kettle_execute(socket, bootstrapTxData.to, bootstrapTxData.data);
 
   const executionResult = JSON.parse(resp);
   if (executionResult.Success === undefined) {
