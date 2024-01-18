@@ -68,7 +68,7 @@ async function testTL(Timelock: ethers.Contract, socket: net.Socket) {
 }
 
 async function deploy() {
-  const socket = net.connect({port: 5556});
+  const socket = net.connect({port: 5556, host: process.env.KETTLE_HOST});
 
   let resp = await kettle_advance(socket);
   if (resp !== 'advanced') {
