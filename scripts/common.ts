@@ -20,8 +20,9 @@ export async function deploy_artifact_direct(path: string, signer: ethers.Signer
 }
 
 export async function deploy_artifact(path: string, signer: ethers.Signer, ...args: any[]): Promise<[ethers.Contract, boolean]> {
+  let ADDR_OVERRIDES: {[key: string]: any} = LocalConfig.ADDR_OVERRIDES;
   if (path in LocalConfig.ADDR_OVERRIDES) {
-    const addr = LocalConfig.ADDR_OVERRIDES[path];
+    const addr = ADDR_OVERRIDES[path];
     console.log("found address "+addr+" for "+path+", attaching it instead of deploying a new one");
     return new Promise((resolve) => {
       resolve([attach_artifact(path, signer, addr), true]);
@@ -29,9 +30,13 @@ export async function deploy_artifact(path: string, signer: ethers.Signer, ...ar
   }
   const contract = await deploy_artifact_direct(path, signer, ...args);
 
-  LocalConfig.ADDR_OVERRIDES[path] = contract.target;
+  ADDR_OVERRIDES[path] = contract.target;
+  const updatedConfig = {
+    ...LocalConfig,
+    ADDR_OVERRIDES,
+  }
 
-  fs.writeFileSync("deployment.json", JSON.stringify(LocalConfig.default, null, 2));
+  fs.writeFileSync("deployment.json", JSON.stringify(updatedConfig, null, 2));
 
   return [contract, false];
 }
