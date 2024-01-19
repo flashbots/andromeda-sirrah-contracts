@@ -1,117 +1,187 @@
 import { useEffect, useState } from 'react'
-import reactLogo from './assets/react.svg'
-// TODO: don't duplicate the ABI file; pull from build artifacts instead
-import Timelock from './assets/Timelock.json'
-import viteLogo from '/vite.svg'
+import flashbotsLogo from './assets/flashbots.png'
 import './App.css'
-import { HttpTransport, encodeFunctionData, hexToBigInt, http } from "viem/src/index"
+import { 
+  decodeFunctionResult,
+  encodeFunctionData,
+  fromHex,
+  getContract,
+  HttpTransport,
+  http,
+  toHex,
+  keccak256,
+} from "viem/src/index"
 import {
   getSuaveProvider,
   getSuaveWallet,
   SuaveProvider,
-  SuaveWallet,
-  TransactionRequestSuave
 } from "viem/src/chains/utils/index"
+import * as LocalConfig from '../../deployment.json'
+import { kettle_advance, kettle_execute } from "../../scripts/common.ts"
+import Timelock from "../../out/Timelock.sol/Timelock.json"
 
 function App() {
   const [isTimelockInitialized, setIsTimelockInitialized] = useState<boolean | undefined>()
+  const [messagePromptHidden, setMessagePromptHidden] = useState<boolean | undefined>()
+  const [deadline, setDeadline] = useState<bigint>(60n)
+  const [encryptedMessage, setEncryptedMessage] = useState<string | undefined>()
+  const [decryptedMessage, setDecryptedMessage] = useState<string | undefined>()
   const [suaveProvider, setSuaveProvider] = useState<SuaveProvider<HttpTransport>>()
-  const [suaveWallet, setSuaveWallet] = useState<SuaveWallet<HttpTransport>>()
-  const timelockAddress = "0xF45DA749ad6369d9C8bF70eac31041526E9dEFb1" // TODO: fill in w/ env var
+  const [message, setMessage] = useState("");
+  const [timelock, setTimelock] = useState<any | undefined>();
 
   // only runs once
   useEffect(() => {
-    const suaveProvider = getSuaveProvider(http("http://localhost:8545"))
+    const suaveProvider = getSuaveProvider(http(LocalConfig.RPC_URL))
     const suaveWallet = getSuaveWallet({
-      transport: http("http://localhost:8545"),
-      privateKey: "0x91ab9a7e53c220e6210460b65a7a3bb2ca181412a8a7b43ff336b3df1737ce12",
+      transport: http(LocalConfig.RPC_URL),
+      privateKey: LocalConfig.PRIVATE_KEY,
     })
     setSuaveProvider(suaveProvider)
-    setSuaveWallet(suaveWallet)
+
+    // Create contract instance
+    const timelock = getContract({
+      address: LocalConfig.ADDR_OVERRIDES[LocalConfig.TIMELOCK_ARTIFACT],
+      abi: Timelock.abi,
+      publicClient: suaveProvider, 
+      walletClient: suaveWallet,
+    })
+    setTimelock(timelock)
   }, [])
 
-  async function getTimelockIsInitialized() {
-    const timelockCall = encodeFunctionData({
-      abi: Timelock.abi,
-      functionName: "isInitialized",
-    })
-    const tx: TransactionRequestSuave = {
-      to: timelockAddress,
-      data: timelockCall,
-      // only necessary bc of a bug in suave-viem
-      gasPrice: 10n * 1000000000n,
-      gas: 300000n,
-      type: "0x0",
+  useEffect(() => {
+    checkTimelockIsInitialized()
+  }, [timelock]);
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (encryptedMessage && !decryptedMessage) {
+        const timeout = await fetchDeadline();
+        if (timeout <= 0n) {
+          const message = await decryptMessage(encryptedMessage)
+          setDecryptedMessage(message);
+          clearInterval(interval)
+        }
+      }
+    }, 1000); // Update every second
+
+    // Clean up the interval on component unmount
+    return () => clearInterval(interval);
+  }, [encryptedMessage]); // Re-run the effect when `encryptedMessage` changes
+
+  async function checkTimelockIsInitialized() {
+    const isInitialized = await timelock?.read.isInitialized()
+    if (isInitialized) {
+      console.log("Timelock is initialized")
+      setIsTimelockInitialized(true)
+    } else {
+      console.log("Timelock is still not initialized")
+      setIsTimelockInitialized(false)
     }
-    const res = await suaveProvider?.call({
-      ...tx,
-      account: suaveWallet?.account,
-    })
-    return res
   }
 
-  async function submitEncryptedOrder() {
-    const ciph = "0xf00000000baaaaaaaaaaa77777777777" // TODO: get from timelock.encryptMessage(message,bytes32)
-    const tx: TransactionRequestSuave = {
-      type: "0x43",
-      confidentialInputs: "0x",
-      to: timelockAddress,
-      data: encodeFunctionData({
-        abi: Timelock.abi,
-        functionName: "submitEncrypted",
-        args: [
-          ciph,
-        ],
-      }),
-      gasPrice: 10n * 1000000000n,
-      gas: 300000n,
-    }
-    const res = await suaveWallet?.sendTransaction(tx)
+  async function submitEncryptedMessage(message: string) {
+    const encryptedMessage = await timelock?.read.encryptMessage([
+      message.padEnd(message.length+32-message.length%32),
+      toHex(crypto.getRandomValues(new Uint8Array(32)))
+    ]);
+    await timelock.write.submitEncrypted([encryptedMessage])
+
+    return encryptedMessage
   }
 
-  /* TODO: replicate this:
-  assertEq(timelock.isInitialized(), true);
+  async function fetchDeadline() {
+    if( typeof encryptedMessage != 'undefined' ) {
+      const deadline = await timelock.read.deadlines([keccak256(encryptedMessage)]) as bigint;
+      if(deadline == 0n) {
+        return 60n
+      }
+      const block = await suaveProvider?.getBlock();
+      const remainingBlocks = deadline - block?.number;
+      if (remainingBlocks <= 0) {
+        setDeadline(0n)
+        return 0n
+      }
+      const bigIntNeg = (...args) => args.reduce((e) => e < 0 ? e : 0);
+      const timeout = bigIntNeg(block?.timestamp - BigInt(Math.floor(Date.now() / 1000))) + remainingBlocks * 4n
+      setDeadline(timeout)
+      return timeout
+    }
+  }
 
-  // Submit encrypted orders
-  string memory message = "Suave timelock test message!32xr";
-  bytes memory ciph = timelock.encryptMessage(
-      message,
-      bytes32(uint(0xdead2123))
-  );
-  timelock.submitEncrypted(ciph);
+  async function decryptMessage(encryptedMessage: string) {
+    const server = "http://20.62.90.76:5556"
 
-  vm.roll(60);
+    await timelock.write.advance();
 
-  // Off chain compute the solution
-  bytes memory output = timelock.decrypt(ciph);
-  string memory dec = string(output);
-  assertEq(message, dec);
-  */
+    let resp = await kettle_advance(server);
+    if (resp !== 'advanced') {
+      throw("kettle did not advance, refusing to continue: "+resp);
+    }
+
+    const data = encodeFunctionData({
+      abi: timelock.abi,
+      functionName: "decrypt",
+      args: [
+        encryptedMessage,
+      ],
+    })
+    resp = await kettle_execute(server, timelock.address, data.toString());
+
+    let executionResult = JSON.parse(resp);
+    if (executionResult.Success === undefined) {
+      throw("execution did not succeed: "+JSON.stringify(resp));
+    }
+
+    const offchainDecryptResult = decodeFunctionResult({
+      abi: timelock.abi,
+      functionName: "decrypt",
+      data: executionResult.Success.output.Call,
+    }) as `0x${string}`;
+    console.log("Successfully decrypted message: '"+fromHex(offchainDecryptResult, "string").trim()+"'");
+
+    return fromHex(offchainDecryptResult, "string").trim();
+  }
 
   return (
     <>
       <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
+        <a href="https://www.flashbots.net" target="_blank">
+          <img src={flashbotsLogo} className="logo" alt="Flashbots logo" />
         </a>
       </div>
       <div className="card">
+        {isTimelockInitialized && !messagePromptHidden && (
+          <div>
+            <input type="text" value={message} onChange={(e) => setMessage(e.target.value)} />
+          </div>
+        )}
         <button onClick={async () => {
-          const isInitialized = await getTimelockIsInitialized()
-          console.log(isInitialized)
-          if (isInitialized?.data && hexToBigInt(isInitialized.data) == 0n) {
-            console.log("Timelock is still not initialized")
-            setIsTimelockInitialized(false)
+          if (isTimelockInitialized != true) {
+            await checkTimelockIsInitialized()
+          } else if (encryptedMessage === undefined) {
+            setMessagePromptHidden(true);
+            setEncryptedMessage(await submitEncryptedMessage(message))
+          } else {
+            setDecryptedMessage(await decryptMessage(encryptedMessage));
           }
         }}>
-          Timelock is{isTimelockInitialized === undefined ? " not" : isTimelockInitialized ? "" : " still not"} initialized
+          {!messagePromptHidden && (
+            <div>
+            {isTimelockInitialized === undefined ? "Check if ": ""}Timelock is{isTimelockInitialized === undefined ? "" : isTimelockInitialized ? "" : " not yet"} initialized{isTimelockInitialized ? " - submit message":""}
+            </div>
+          )}
+          {messagePromptHidden && deadline > 0n && (
+            <div>
+              Waiting {deadline?.toString()} seconds for timelock to expire...
+            </div>
+          )}
+          {messagePromptHidden && deadline === 0n && (
+            <div>
+            {decryptedMessage === undefined ? "Decrypting message..." : "Decrypted message: '"+decryptedMessage+"'"}
+            </div>
+          )}
         </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test
-        </p>
       </div>
     </>
   )

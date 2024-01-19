@@ -42,23 +42,33 @@ export async function deploy_artifact(path: string, signer: ethers.Signer, ...ar
 }
 
 /* Utils */
-export async function kettle_advance(s: net.Socket): Promise<string> {
-  return await send_to_kettle(s, "advance");
+export async function kettle_advance(server: net.Socket | string): Promise<string> {
+  return await send_to_kettle(server, "advance");
 }
-export async function kettle_execute(s: net.Socket, to: string, data: string): Promise<string> {
+export async function kettle_execute(server: net.Socket | string, to: string, data: string): Promise<string> {
   const cmd = 'execute {"caller":"0x0000000000000000000000000000000000000000","gas_limit":21000000,"gas_price":"0x0","transact_to":{"Call":"'+to+'"},"value":"0x0","data":"'+data+'","nonce":0,"chain_id":null,"access_list":[],"gas_priority_fee":null,"blob_hashes":[],"max_fee_per_blob_gas":null}';
-  return await send_to_kettle(s, cmd);
+  return await send_to_kettle(server, cmd);
 }
 
-export async function send_to_kettle(s: net.Socket, cmd: string): Promise<string> {
+export async function send_to_kettle(server: net.Socket | string, cmd: string): Promise<string> {
+  if (typeof server === 'string') {
+      const response = await fetch(server, {
+      method: 'POST',
+      headers: {'Content-Type': 'text/plain'},
+      body: cmd
+    });
+
+    return (await response.text()).trim().replace(/^"|"$/gm,'').replace(/\\"/gm,'"');
+  }
+
   return new Promise((resolve) => {
     let outBuf = "";
-    s.on('data', function(b) {
+    server.on('data', function(b) {
       outBuf += b.toString("utf-8");
       if (outBuf.endsWith("\n")) {
         resolve(outBuf.trim().replace(/^"|"$/gm,'').replace(/\\"/gm,'"'));
       }
     });
-    s.write(cmd+"\n");
+    server.write(cmd+"\n");
   });
 }

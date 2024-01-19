@@ -87,7 +87,7 @@ async function deploy() {
   if (!foundTL) {
     await deriveKey(await Timelock.getAddress(), socket, KM);
   }
-  //await testTL(Timelock, socket);
+  await testTL(Timelock, socket);
 }
 
 async function deriveKey(address: string, socket: net.Socket, KM: ethers.Contract) {
