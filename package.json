@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "ethers": "^6.9.1",
+    "node-fetch": "^2.7.0",
     "ts-node": "^10.9.2"
   }
 }

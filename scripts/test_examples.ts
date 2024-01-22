@@ -47,7 +47,7 @@ async function testTL(Timelock: ethers.Contract, socket: net.Socket) {
 
   console.log("submitted encrypted message "+encryptedMessage+" in "+submitEncryptedTx.hash);
 
-  await sleep(66000);
+  await sleep(72000);
 
   await (await Timelock.advance()).wait();
   let resp = await kettle_advance(socket);

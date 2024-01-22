@@ -1,6 +1,7 @@
 import { ethers } from "ethers";
 import fs from 'fs';
 import net from "net";
+import fetch from "node-fetch";
 
 import * as LocalConfig from '../deployment.json';
 

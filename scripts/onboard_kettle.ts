@@ -7,7 +7,7 @@ import { attach_artifact, deploy_artifact, kettle_execute, kettle_advance} from 
 import * as LocalConfig from '../deployment.json'
 
 async function main() {
-  const new_kettle_socket = "http://20.62.90.76:5556" //net.connect({port: "5556"});
+  const new_kettle_socket = net.connect({port: "5556"});
 
   const provider = new JsonRpcProvider(LocalConfig.RPC_URL);
   const wallet = new ethers.Wallet(LocalConfig.PRIVATE_KEY, provider);
