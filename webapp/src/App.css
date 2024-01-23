@@ -33,6 +33,14 @@
   }
 }
 
+textarea {
+    background-color: #000;
+    border: 1px solid #000;
+    color: #00ff00;
+    padding: 8px;
+    font-family: courier new;
+}
+
 .card {
   padding: 2em;
 }

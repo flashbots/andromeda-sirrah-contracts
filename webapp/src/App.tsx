@@ -29,15 +29,25 @@ function App() {
   const [suaveProvider, setSuaveProvider] = useState<SuaveProvider<HttpTransport>>()
   const [message, setMessage] = useState("");
   const [timelock, setTimelock] = useState<any | undefined>();
+  const [consoleLog, setConsoleLog] = useState<string>("");
+
+  function updateConsoleLog(newLog: string) {
+    setConsoleLog(consoleLog => "["+Date.now().toString()+"]: "+newLog+"\n"+consoleLog);
+  }
 
   // only runs once
   useEffect(() => {
+    setConsoleLog("");
+
     const suaveProvider = getSuaveProvider(http(LocalConfig.RPC_URL))
+    updateConsoleLog("Connected to SUAVE Rigil RPC at "+LocalConfig.RPC_URL);
+    setSuaveProvider(suaveProvider)
+
     const suaveWallet = getSuaveWallet({
       transport: http(LocalConfig.RPC_URL),
       privateKey: LocalConfig.PRIVATE_KEY as '0x{string}',
     })
-    setSuaveProvider(suaveProvider)
+    updateConsoleLog("Opened SUAVE wallet "+suaveWallet.account.address);
 
     // Create contract instance
     let ADDR_OVERRIDES: {[key: string]: any} = LocalConfig.ADDR_OVERRIDES;
@@ -46,28 +56,37 @@ function App() {
       abi: Timelock.abi,
       publicClient: suaveProvider, 
       walletClient: suaveWallet,
-    })
-    setTimelock(timelock)
-  }, [])
+    });
+    setTimelock(timelock);
+    updateConsoleLog("Connected to Timelock contract at "+timelock.address);
 
-  useEffect(() => {
     checkTimelockIsInitialized()
-  }, [timelock]);
 
-  useEffect(() => {
-    const interval = setInterval(async () => {
+    const deadlineFetch = setInterval(async () => {
       if (encryptedMessage && !decryptedMessage) {
-        const timeout = await fetchDeadline();
-        if (timeout != undefined && timeout <= 0n) {
-          const message = await decryptMessage(encryptedMessage)
-          setDecryptedMessage(message);
-          clearInterval(interval)
-        }
+        await fetchDeadline();
       }
     }, 1000); // Update every second
+    //
+    const decryptionAttempt = setInterval(async () => {
+      if (encryptedMessage && !decryptedMessage) {
+        try {
+          const message = await decryptMessage(encryptedMessage)
+          setDecryptedMessage(message);
+          updateConsoleLog("Decrypted message is: "+message);
+          clearInterval(deadlineFetch);
+          clearInterval(decryptionAttempt);
+        } catch(e) {
+          updateConsoleLog("Failed to decrypt message "+deadline+" seconds before deadline: "+e.message);
+        }
+      }
+    }, 10000); // Try to decrypt every 10 seconds
 
     // Clean up the interval on component unmount
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(deadlineFetch);
+      clearInterval(decryptionAttempt);
+    }
   }, [encryptedMessage]); // Re-run the effect when `encryptedMessage` changes
 
   async function checkTimelockIsInitialized() {
@@ -86,19 +105,21 @@ function App() {
       message.padEnd(message.length+32-message.length%32),
       toHex(crypto.getRandomValues(new Uint8Array(32)))
     ]);
-    await timelock.write.submitEncrypted([encryptedMessage])
+    const tx = await timelock.write.submitEncrypted([encryptedMessage])
+    window.tx = tx;
+    updateConsoleLog("Submited encrypted message to the chain: "+JSON.stringify(tx));
 
     return encryptedMessage
   }
 
   async function fetchDeadline() {
     if( typeof encryptedMessage != 'undefined' ) {
-      const deadline = await timelock.read.deadlines([keccak256(encryptedMessage as '0x{string}')]) as bigint;
-      if(deadline == 0n) {
+      const msgDeadline = await timelock.read.deadlines([keccak256(encryptedMessage as '0x{string}')]) as bigint;
+      if(msgDeadline == 0n) {
         return 60n
       }
       const block = await suaveProvider?.getBlock();
-      const remainingBlocks = deadline - (block?.number ?? 0n);
+      const remainingBlocks = msgDeadline - (block?.number ?? 0n);
       if (remainingBlocks <= 0) {
         setDeadline(0n)
         return 0n
@@ -115,10 +136,7 @@ function App() {
     const server = LocalConfig.KETTLE_RPC;
     assert(typeof server == 'string', "web-based apps have to connect via http");
 
-    let resp = await kettle_advance(server);
-    if (resp !== 'advanced') {
-      throw("kettle did not advance, refusing to continue: "+resp);
-    }
+    await kettle_advance(server);
 
     const data = encodeFunctionData({
       abi: timelock.abi,
@@ -127,12 +145,15 @@ function App() {
         encryptedMessage,
       ],
     })
-    resp = await kettle_execute(server, timelock.address, data.toString());
+    updateConsoleLog("Requesting decryption from kettle: "+JSON.stringify(data));
+    let resp = await kettle_execute(server, timelock.address, data.toString());
 
     let executionResult = JSON.parse(resp);
     if (executionResult.Success === undefined) {
+      updateConsoleLog("Kettle refused to decrypt the message: "+JSON.stringify(resp));
       throw("execution did not succeed: "+JSON.stringify(resp));
     }
+    updateConsoleLog("Kettle decrypted the message: "+JSON.stringify(resp));
 
     // @ts-expect-error
     const offchainDecryptResult = decodeFunctionResult({
@@ -158,21 +179,24 @@ function App() {
             <input type="text" value={message} onChange={(e) => setMessage(e.target.value)} />
           </div>
         )}
-        <button onClick={async () => {
-          if (isTimelockInitialized != true) {
-            await checkTimelockIsInitialized()
-          } else if (encryptedMessage === undefined) {
-            setMessagePromptHidden(true);
-            setEncryptedMessage(await submitEncryptedMessage(message))
-          } else {
-            setDecryptedMessage(await decryptMessage(encryptedMessage));
-          }
-        }}>
-          {!messagePromptHidden && (
+        { !messagePromptHidden && (
+          <button onClick={async () => {
+            if (isTimelockInitialized != true) {
+              await checkTimelockIsInitialized()
+            } else if (encryptedMessage === undefined) {
+              setMessagePromptHidden(true);
+              setEncryptedMessage(await submitEncryptedMessage(message))
+            } else {
+              setDecryptedMessage(await decryptMessage(encryptedMessage));
+              updateConsoleLog("Decrypted message is: "+message);
+            }
+          }}>
             <div>
             {isTimelockInitialized === undefined ? "Check if ": ""}Timelock is{isTimelockInitialized === undefined ? "" : isTimelockInitialized ? "" : " not yet"} initialized{isTimelockInitialized ? " - submit message":""}
             </div>
-          )}
+          </button>
+        )}
+
           {messagePromptHidden && deadline > 0n && (
             <div>
               Waiting {deadline?.toString()} seconds for timelock to expire...
@@ -183,7 +207,11 @@ function App() {
             {decryptedMessage === undefined ? "Decrypting message..." : "Decrypted message: '"+decryptedMessage+"'"}
             </div>
           )}
-        </button>
+
+        <br/>
+        <br/>
+        <textarea rows="15" cols="96" value={consoleLog} readOnly>
+        </textarea>
       </div>
     </>
   )
