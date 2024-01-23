@@ -28,14 +28,13 @@ abstract contract KeyManagerBase {
     //////////////////////////////////
     // To be implemented by subclasses
     //////////////////////////////////
-    
+
     // Only the contract in confidential mode can access the
     // master private key
     function xPriv() internal virtual returns (bytes32);
-    
 
     // Key derivation for encryption
-    
+
     // Any contract in confidential mode can request a
     // hardened derived key
     function _derivedPriv(address a) private returns (bytes32) {
@@ -104,9 +103,9 @@ contract KeyManager_v0 is KeyManagerBase {
 
     function offchain_Register() public returns (address addr, bytes memory myPub, bytes memory att) {
         bytes32 myPriv = Suave.sealingKey("myPriv");
-        bytes memory myPub = PKE.derivePubKey(myPriv);
-        address addr = address(Secp256k1.deriveAddress(uint256(myPriv)));
-        bytes memory att = Suave.attestSgx(keccak256(abi.encodePacked("myPub", myPub, addr)));
+        myPub = PKE.derivePubKey(myPriv);
+        addr = address(Secp256k1.deriveAddress(uint256(myPriv)));
+        att = Suave.attestSgx(keccak256(abi.encodePacked("myPub", myPub, addr)));
         return (addr, myPub, att);
     }
 

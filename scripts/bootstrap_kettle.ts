@@ -2,17 +2,14 @@ import net from "net";
 
 import { ethers, JsonRpcProvider } from "ethers";
 
-import { attach_artifact, deploy_artifact, kettle_execute, kettle_advance} from "./common.ts"
+import { connect_kettle, attach_artifact, deploy_artifact, kettle_execute, kettle_advance} from "./common"
 
 import * as LocalConfig from '../deployment.json'
 
 async function main() {
-  const socket = net.connect({port: "5556"});
+  const kettle = connect_kettle(LocalConfig.KETTLE_RPC);
 
-  let resp = await kettle_advance(socket);
-  if (resp !== 'advanced') {
-    throw("kettle did not advance, refusing to continue: "+resp);
-  }
+  await kettle_advance(kettle);
 
   const provider = new JsonRpcProvider(LocalConfig.RPC_URL);
   const wallet = new ethers.Wallet(LocalConfig.PRIVATE_KEY, provider);
@@ -26,8 +23,9 @@ async function main() {
     throw("Key manager already bootstrapped with "+keyManagerPub);
   }
 
+  await kettle_advance(kettle);
   const bootstrapTxData = await KM.offchain_Bootstrap.populateTransaction();
-  resp = await kettle_execute(socket, bootstrapTxData.to, bootstrapTxData.data);
+  let resp = await kettle_execute(kettle, bootstrapTxData.to, bootstrapTxData.data);
 
   const executionResult = JSON.parse(resp);
   if (executionResult.Success === undefined) {

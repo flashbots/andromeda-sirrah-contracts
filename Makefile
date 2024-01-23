@@ -15,7 +15,7 @@ onboard: build
 	npx ts-node -T scripts/onboard_kettle.ts
 
 .PHONY: test_examples
-onboard: build
+test_examples: build
 	npx ts-node -T scripts/test_examples.ts
 
 .PHONY: configure_all_tcbinfos
