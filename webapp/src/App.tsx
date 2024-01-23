@@ -35,13 +35,14 @@ function App() {
     const suaveProvider = getSuaveProvider(http(LocalConfig.RPC_URL))
     const suaveWallet = getSuaveWallet({
       transport: http(LocalConfig.RPC_URL),
-      privateKey: LocalConfig.PRIVATE_KEY,
+      privateKey: LocalConfig.PRIVATE_KEY as '0x{string}',
     })
     setSuaveProvider(suaveProvider)
 
     // Create contract instance
+    let ADDR_OVERRIDES: {[key: string]: any} = LocalConfig.ADDR_OVERRIDES;
     const timelock = getContract({
-      address: LocalConfig.ADDR_OVERRIDES[LocalConfig.TIMELOCK_ARTIFACT],
+      address: ADDR_OVERRIDES[LocalConfig.TIMELOCK_ARTIFACT],
       abi: Timelock.abi,
       publicClient: suaveProvider, 
       walletClient: suaveWallet,
@@ -57,7 +58,7 @@ function App() {
     const interval = setInterval(async () => {
       if (encryptedMessage && !decryptedMessage) {
         const timeout = await fetchDeadline();
-        if (timeout <= 0n) {
+        if ((timeout ?? 0n) <= 0n) {
           const message = await decryptMessage(encryptedMessage)
           setDecryptedMessage(message);
           clearInterval(interval)
@@ -92,27 +93,27 @@ function App() {
 
   async function fetchDeadline() {
     if( typeof encryptedMessage != 'undefined' ) {
-      const deadline = await timelock.read.deadlines([keccak256(encryptedMessage)]) as bigint;
+      const deadline = await timelock.read.deadlines([keccak256(encryptedMessage as '0x{string}')]) as bigint;
       if(deadline == 0n) {
         return 60n
       }
       const block = await suaveProvider?.getBlock();
-      const remainingBlocks = deadline - block?.number;
+      const remainingBlocks = deadline - (block?.number ?? 0n);
       if (remainingBlocks <= 0) {
         setDeadline(0n)
         return 0n
       }
-      const bigIntNeg = (...args) => args.reduce((e) => e < 0 ? e : 0);
-      const timeout = bigIntNeg(block?.timestamp - BigInt(Math.floor(Date.now() / 1000))) + remainingBlocks * 4n
-      setDeadline(timeout)
-      return timeout
+      const bigIntNeg = (...args: bigint[]) => args.reduce((e) => e < 0 ? e : 0n);
+      const nowAsBigInt = BigInt(Math.floor(Date.now() / 1000));
+      const timeout = bigIntNeg((block?.timestamp ?? nowAsBigInt) - nowAsBigInt) + remainingBlocks * 4n;
+      setDeadline(timeout);
+      return timeout;
     }
   }
 
   async function decryptMessage(encryptedMessage: string) {
-    const server = "http://20.62.90.76:5556"
-
-    await timelock.write.advance();
+    const server = LocalConfig.KETTLE_RPC;
+    assert(typeof server == 'string', "web-based apps have to connect via http");
 
     let resp = await kettle_advance(server);
     if (resp !== 'advanced') {
@@ -133,6 +134,7 @@ function App() {
       throw("execution did not succeed: "+JSON.stringify(resp));
     }
 
+    // @ts-expect-error
     const offchainDecryptResult = decodeFunctionResult({
       abi: timelock.abi,
       functionName: "decrypt",

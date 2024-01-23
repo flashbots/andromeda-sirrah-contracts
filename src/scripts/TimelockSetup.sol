@@ -16,12 +16,7 @@ contract TimelockSetup is Script {
         andromeda.initialize();
         // vm.warp(1701528486);
 
-        andromeda.setMrSigner(
-            bytes32(
-                0x1cf2e52911410fbf3f199056a98d58795a559a2e800933f7fcd13d048462271c
-            ),
-            true
-        );
+        andromeda.setMrSigner(bytes32(0x93adbda6205882743aedecbbebfb4bae7f132a9bbbeac9497fcd3c140dffe52c), true);
     }
 }
 

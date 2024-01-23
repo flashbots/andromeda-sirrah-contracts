@@ -2,13 +2,13 @@ import net from "net";
 
 import { ethers, JsonRpcProvider } from "ethers";
 
-import { deploy_artifact, deploy_artifact_direct, attach_artifact, kettle_advance, kettle_execute } from "./common"
+import { connect_kettle, deploy_artifact, deploy_artifact_direct, attach_artifact, kettle_advance, kettle_execute } from "./common"
 
 import * as LocalConfig from '../deployment.json'
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function testSA(SealedAuction: ethers.Contract, socket: net.Socket) {
+async function testSA(SealedAuction: ethers.Contract, kettle: net.Socket | string) {
   console.log("Testing sealed auction contract...");
 
   const encryptedOrder = await SealedAuction.encryptOrder(2,ethers.zeroPadBytes("0xdead2123",32));
@@ -16,14 +16,10 @@ async function testSA(SealedAuction: ethers.Contract, socket: net.Socket) {
 
   await sleep(10000);
 
-  await (await SealedAuction.advance()).wait();
-  let resp = await kettle_advance(socket);
-  if (resp !== 'advanced') {
-    throw("kettle did not advance, refusing to continue: "+resp);
-  }
+  await kettle_advance(kettle);
 
   const offchainFinalizeTxData = await SealedAuction.offchain_Finalize.populateTransaction();
-  resp = await kettle_execute(socket, offchainFinalizeTxData.to, offchainFinalizeTxData.data);
+  let resp = await kettle_execute(kettle, offchainFinalizeTxData.to, offchainFinalizeTxData.data);
 
   let executionResult = JSON.parse(resp);
   if (executionResult.Success === undefined) {
@@ -37,7 +33,7 @@ async function testSA(SealedAuction: ethers.Contract, socket: net.Socket) {
   console.log("successfully finalized auction with '"+offchainFinalizeResult.secondPrice_+"' as second price");
 }
 
-async function testTL(Timelock: ethers.Contract, socket: net.Socket) {
+async function testTL(Timelock: ethers.Contract, kettle: net.Socket | string) {
   console.log("Testing timelock contract...");
 
   // Tests Timelock contract
@@ -49,14 +45,10 @@ async function testTL(Timelock: ethers.Contract, socket: net.Socket) {
 
   await sleep(72000);
 
-  await (await Timelock.advance()).wait();
-  let resp = await kettle_advance(socket);
-  if (resp !== 'advanced') {
-    throw("kettle did not advance, refusing to continue: "+resp);
-  }
+  await kettle_advance(kettle);
 
   const offchainDecryptTxData = await Timelock.decrypt.populateTransaction(encryptedMessage);
-  resp = await kettle_execute(socket, offchainDecryptTxData.to, offchainDecryptTxData.data);
+  let resp = await kettle_execute(kettle, offchainDecryptTxData.to, offchainDecryptTxData.data);
 
   let executionResult = JSON.parse(resp);
   if (executionResult.Success === undefined) {
@@ -68,31 +60,31 @@ async function testTL(Timelock: ethers.Contract, socket: net.Socket) {
 }
 
 async function deploy() {
-  const socket = net.connect({port: 5556, host: process.env.KETTLE_HOST});
+  const kettle = connect_kettle(LocalConfig.KETTLE_RPC);
 
-  let resp = await kettle_advance(socket);
-  if (resp !== 'advanced') {
-    throw("kettle did not advance, refusing to continue: "+resp);
-  }
+  await kettle_advance(kettle);
   const provider = new JsonRpcProvider(LocalConfig.RPC_URL);
   const wallet = new ethers.Wallet(LocalConfig.PRIVATE_KEY, provider);
   const ADDR_OVERRIDES: {[key: string]: string} = LocalConfig.ADDR_OVERRIDES;
   const KM = await attach_artifact(LocalConfig.KEY_MANAGER_SN_ARTIFACT, wallet, ADDR_OVERRIDES[LocalConfig.KEY_MANAGER_SN_ARTIFACT]);
 
   const SealedAuction = await deploy_artifact_direct(LocalConfig.SEALED_AUCTION_ARTIFACT, wallet, KM.target, 5);
-  await deriveKey(await SealedAuction.getAddress(), socket, KM);
-  await testSA(SealedAuction, socket);
+  await kettle_advance(kettle);
+
+  await deriveKey(await SealedAuction.getAddress(), kettle, KM);
+  await testSA(SealedAuction, kettle);
 
   const [Timelock, foundTL] = await deploy_artifact(LocalConfig.TIMELOCK_ARTIFACT, wallet, KM.target);
   if (!foundTL) {
-    await deriveKey(await Timelock.getAddress(), socket, KM);
+    await kettle_advance(kettle);
+    await deriveKey(await Timelock.getAddress(), kettle, KM);
   }
-  await testTL(Timelock, socket);
+  await testTL(Timelock, kettle);
 }
 
-async function deriveKey(address: string, socket: net.Socket, KM: ethers.Contract) {
+async function deriveKey(address: string, kettle: net.Socket | string, KM: ethers.Contract) {
   const offchainDeriveTxData = await KM.offchain_DeriveKey.populateTransaction(address);
-  let resp = await kettle_execute(socket, offchainDeriveTxData.to, offchainDeriveTxData.data);
+  let resp = await kettle_execute(kettle, offchainDeriveTxData.to, offchainDeriveTxData.data);
 
   let executionResult = JSON.parse(resp);
   if (executionResult.Success === undefined) {

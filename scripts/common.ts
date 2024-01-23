@@ -32,10 +32,11 @@ export async function deploy_artifact(path: string, signer: ethers.Signer, ...ar
   const contract = await deploy_artifact_direct(path, signer, ...args);
 
   ADDR_OVERRIDES[path] = contract.target;
-  const updatedConfig = {
+  let updatedConfig = {
     ...LocalConfig,
     ADDR_OVERRIDES,
-  }
+  };
+  delete updatedConfig.default;
 
   fs.writeFileSync("deployment.json", JSON.stringify(updatedConfig, null, 2));
 
@@ -43,8 +44,18 @@ export async function deploy_artifact(path: string, signer: ethers.Signer, ...ar
 }
 
 /* Utils */
+export function connect_kettle(conn: object | string): net.Socket | string {
+  if (typeof conn === 'string') {
+    return conn;
+  }
+  return net.connect(conn);
+}
 export async function kettle_advance(server: net.Socket | string): Promise<string> {
-  return await send_to_kettle(server, "advance");
+  let resp = await send_to_kettle(server, "advance");
+  if (resp !== 'advanced') {
+    throw("kettle did not advance, refusing to continue: "+resp);
+  }
+  return resp;
 }
 export async function kettle_execute(server: net.Socket | string, to: string, data: string): Promise<string> {
   const cmd = 'execute {"caller":"0x0000000000000000000000000000000000000000","gas_limit":21000000,"gas_price":"0x0","transact_to":{"Call":"'+to+'"},"value":"0x0","data":"'+data+'","nonce":0,"chain_id":null,"access_list":[],"gas_priority_fee":null,"blob_hashes":[],"max_fee_per_blob_gas":null}';
