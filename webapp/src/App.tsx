@@ -58,7 +58,7 @@ function App() {
     const interval = setInterval(async () => {
       if (encryptedMessage && !decryptedMessage) {
         const timeout = await fetchDeadline();
-        if ((timeout ?? 0n) <= 0n) {
+        if (timeout != undefined && timeout <= 0n) {
           const message = await decryptMessage(encryptedMessage)
           setDecryptedMessage(message);
           clearInterval(interval)
@@ -187,6 +187,10 @@ function App() {
       </div>
     </>
   )
+}
+
+function assert(condition: unknown, msg?: string): asserts condition {
+  if (condition === false) throw new Error(msg)
 }
 
 export default App
