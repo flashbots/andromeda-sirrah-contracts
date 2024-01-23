@@ -2,7 +2,7 @@ import net from "net";
 
 import { ethers, JsonRpcProvider } from "ethers";
 
-import { connect_kettle, deploy_artifact, deploy_artifact_direct, attach_artifact, kettle_advance, kettle_execute } from "./common"
+import { connect_kettle, deploy_artifact, deploy_artifact_direct, attach_artifact, kettle_advance, kettle_execute, derive_key } from "./common"
 
 import * as LocalConfig from '../deployment.json'
 
@@ -71,30 +71,15 @@ async function deploy() {
   const SealedAuction = await deploy_artifact_direct(LocalConfig.SEALED_AUCTION_ARTIFACT, wallet, KM.target, 5);
   await kettle_advance(kettle);
 
-  await deriveKey(await SealedAuction.getAddress(), kettle, KM);
+  await derive_key(await SealedAuction.getAddress(), kettle, KM);
   await testSA(SealedAuction, kettle);
 
   const [Timelock, foundTL] = await deploy_artifact(LocalConfig.TIMELOCK_ARTIFACT, wallet, KM.target);
   if (!foundTL) {
     await kettle_advance(kettle);
-    await deriveKey(await Timelock.getAddress(), kettle, KM);
+    await derive_key(await Timelock.getAddress(), kettle, KM);
   }
   await testTL(Timelock, kettle);
-}
-
-async function deriveKey(address: string, kettle: net.Socket | string, KM: ethers.Contract) {
-  const offchainDeriveTxData = await KM.offchain_DeriveKey.populateTransaction(address);
-  let resp = await kettle_execute(kettle, offchainDeriveTxData.to, offchainDeriveTxData.data);
-
-  let executionResult = JSON.parse(resp);
-  if (executionResult.Success === undefined) {
-    throw("execution did not succeed: "+JSON.stringify(resp));
-  }
-
-  const offchainDeriveResult = KM.interface.decodeFunctionResult(KM.offchain_DeriveKey.fragment, executionResult.Success.output.Call).toObject();
-  const onchainDeriveTx = await (await KM.onchain_DeriveKey(address, offchainDeriveResult.dPub, offchainDeriveResult.sig)).wait();
-
-  console.log("submitted derive key for "+address+" in "+onchainDeriveTx.hash);  
 }
 
 deploy().catch((error) => {

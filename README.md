@@ -91,6 +91,7 @@ For ease of use we provide the following `make` targets:
 * `make configure-all-tcbinfos` to configure `Andromeda` contracts with TCBInfo from Intel
 * `make bootstrap` to bootstrap a kettle for `KeyManager`
 * `make onboard` to onboard a kettle to `KeyManager` from one already bootstrapped
+* `make deploy-examples` to deploy `SealedAuction` and `Timelock` for use in the demo webapp
 * `make test-examples` to automatically deploy and test `SealedAuction` and `Timelock` on chain
 
 Deployed contracts are kept track of in the [deployment.json](deployment.json) file. If you want to re-deploy a contract, simply remove it from the `ADDR_OVERRIDES` section. The various deployment scripts write to the file on successful deployments.
