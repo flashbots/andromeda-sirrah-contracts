@@ -1,3 +1,6 @@
+> [!WARNING]
+> This repository is a work in progress, and for now only functions as a showcase. This code *is not intended to secure any valuable information*.
+
 # Andromeda Sirrah Contracts
 
 This repository contains the smart contracts and development environment for SUAVE's intermediate programming layer, where Solidity contracts directly control SGX trusted hardware features like attestation and sealing. This also contains the code and examples that go along with the post "Sirrah: Speedrunning a TEE Coprocessor."
@@ -97,3 +100,7 @@ forge test --ffi
 ```shell
 forge fmt .
 ```
+
+## License
+
+The code in this project is free software under the [MIT license](LICENSE).
