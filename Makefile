@@ -2,6 +2,14 @@
 build:
 	forge build --revert-strings debug
 
+.PHONY: test
+test:
+	forge test --ffi
+
+.PHONY: format
+format:
+	forge fmt .
+
 .PHONY: deploy
 deploy: build
 	npx ts-node -T scripts/deploy.ts
@@ -14,12 +22,12 @@ bootstrap: build
 onboard: build
 	npx ts-node -T scripts/onboard_kettle.ts
 
-.PHONY: test_examples
-test_examples: build
+.PHONY: test-examples
+test-examples: build
 	npx ts-node -T scripts/test_examples.ts
 
-.PHONY: configure_all_tcbinfos
-configure_all_tcbinfos:
+.PHONY: configure-all-tcbinfos
+configure-all-tcbinfos:
 	# Non-PHONY! If needed, clear it manually
 	cd lib/sgx-tcbInfos && make
 	export TCB_INFO_FILES="$(shell find ./lib/sgx-tcbInfos/assets -name "tcbinfo.json" -printf "%p ")"; \
