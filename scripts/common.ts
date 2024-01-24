@@ -43,7 +43,24 @@ export async function deploy_artifact(path: string, signer: ethers.Signer, ...ar
   return [contract, false];
 }
 
-/* Utils */
+/* Contract utils */
+export async function derive_key(address: string, kettle: net.Socket | string, KM: ethers.Contract) {
+  const offchainDeriveTxData = await KM.offchain_DeriveKey.populateTransaction(address);
+  let resp = await kettle_execute(kettle, offchainDeriveTxData.to, offchainDeriveTxData.data);
+
+  let executionResult = JSON.parse(resp);
+  if (executionResult.Success === undefined) {
+    throw("execution did not succeed: "+JSON.stringify(resp));
+  }
+
+  const offchainDeriveResult = KM.interface.decodeFunctionResult(KM.offchain_DeriveKey.fragment, executionResult.Success.output.Call).toObject();
+  const onchainDeriveTx = await (await KM.onchain_DeriveKey(address, offchainDeriveResult.dPub, offchainDeriveResult.sig)).wait();
+
+  console.log("submitted derive key for "+address+" in "+onchainDeriveTx.hash);  
+}
+
+
+/* Kettle utils */
 export function connect_kettle(conn: object | string): net.Socket | string {
   if (typeof conn === 'string') {
     return conn;

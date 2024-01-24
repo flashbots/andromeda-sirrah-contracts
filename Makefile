@@ -26,6 +26,10 @@ onboard: build
 test-examples: build
 	npx ts-node -T scripts/test_examples.ts
 
+.PHONY: deploy-examples
+deploy-examples: build deploy bootstrap
+	npx ts-node -T scripts/deploy_examples.ts
+
 .PHONY: configure-all-tcbinfos
 configure-all-tcbinfos:
 	# Non-PHONY! If needed, clear it manually

@@ -20,7 +20,8 @@ async function main() {
 
   let keyManagerPub = await KM.xPub();
   if (keyManagerPub !== "0x0000000000000000000000000000000000000000") {
-    throw("Key manager already bootstrapped with "+keyManagerPub);
+    console.log("Key manager already bootstrapped with "+keyManagerPub);
+    return
   }
 
   await kettle_advance(kettle);
