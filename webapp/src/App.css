@@ -1,5 +1,6 @@
 #root {
-  max-width: 1280px;
+  min-width: 80%;
+  max-width: 80%;
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
@@ -33,12 +34,18 @@
   }
 }
 
-textarea {
-    background-color: #000;
-    border: 1px solid #000;
-    color: #00ff00;
-    padding: 8px;
-    font-family: courier new;
+.textbox {
+  text-align: left;
+  min-height: 32em;
+  max-height: 32em;
+  min-width: 100%;
+  overflow-wrap: anywhere;
+  overflow-y: scroll;
+  background-color: #000;
+  border: 1px solid #000;
+  color: #00ff00;
+  padding: 8px;
+  font-family: courier new;
 }
 
 .card {
