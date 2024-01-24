@@ -42,7 +42,7 @@ We provide three implementations:
 2. A remote environment using actual remote attestations, computed via a remote service (dummy attester service TODO) [./src/AndromedaRemote.sol](./src/AndromedaRemote.sol)
 3. Actually invoke the precompile addresses recognized by the MEVM.
 
-To reiterate, the actual implementation of these precompiles in EVM is in a [separate repository.](https://github.com/flashbots/revm-andromeda/). The forge development environment here does NOT require any use of SGX, so you can develop (even on low level components like a Key Manager and TCB recovery handling) on any machine.
+To reiterate, the actual implementation of these precompiles in EVM is in a [separate repository.](https://github.com/flashbots/suave-andromeda-revm/). The forge development environment here does NOT require any use of SGX, so you can develop (even on low level components like a Key Manager and TCB recovery handling) on any machine.
 
 ## Speedrunning a Second Price auction
 
@@ -81,25 +81,19 @@ curl http://sirrah.ln.soc1024.com/decrypt/$CIPH
 
 ## Usage
 
-Relies on [Foundry](https://getfoundry.sh/) and [Python 3](https://www.python.org/downloads/).
+Relies on [Foundry](https://getfoundry.sh/) for contrats, [Python 3](https://www.python.org/downloads/) for various utilities, and [npm](https://nodejs.org/en) for automation and demo.  
 
-### Build
+For ease of use we provide the following `make` targets:
+* `make build` to build contracts
+* `make format` to format contracts
+* `make test` to test contracts
+* `make deploy` to deploy contracts
+* `make configure-all-tcbinfos` to configure `Andromeda` contracts with TCBInfo from Intel
+* `make bootstrap` to bootstrap a kettle for `KeyManager`
+* `make onboard` to onboard a kettle to `KeyManager` from one already bootstrapped
+* `make test-examples` to automatically deploy and test `SealedAuction` and `Timelock` on chain
 
-```shell
-forge build
-```
-
-### Test
-
-```shell
-forge test --ffi
-```
-
-### Format
-
-```shell
-forge fmt .
-```
+Deployed contracts are kept track of in the [deployment.json](deployment.json) file. If you want to re-deploy a contract, simply remove it from the `ADDR_OVERRIDES` section. The various deployment scripts write to the file on successful deployments.
 
 ## License
 
