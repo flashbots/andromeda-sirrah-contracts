@@ -22,4 +22,5 @@ If you want to build and deploy the Timelock contract from scratch, see the pare
 ## Signing chain transactions
 
 The demo will sign chain transactions with either the raw private key (if one is provided through [../deployment.json](../deployment.json)), or with MetaMask.  
-> :warning **DO NOT PUT YOUR PRIVATE KEY IN THE DEPLOYMENT FILE IF YOU INTEND TO EXPOSE THE WEBAPP.** Since this is a React app, all of the contents of imported files could be accessible to whoever connects to your application. If you intend to expose the demo, rely on MetaMask instead.
+> [!WARNING]
+> **DO NOT PUT YOUR PRIVATE KEY IN THE DEPLOYMENT FILE IF YOU INTEND TO EXPOSE THE WEBAPP.** Since this is a React app, all of the contents of imported files could be accessible to whoever connects to your application. If you intend to expose the demo, rely on MetaMask instead.

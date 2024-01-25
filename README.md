@@ -128,7 +128,8 @@ If you want to use predeployed `Timelock` demo, one is available on Rigil. Inclu
   }
 ```
 
-> :warning the addresses will change, so don't depend on them too much. This is intended for quick prototyping rather than something that is highly available.
+> [!WARNING]
+> The addresses will change, so don't depend on them too much. This is intended for quick prototyping rather than something that is highly available.
 
 
 ## License
