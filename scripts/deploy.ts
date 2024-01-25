@@ -23,10 +23,15 @@ async function deploy() {
     const enclaveIdTx = await (await Andromeda.configureQeIdentityJson(enclaveId)).wait();
     console.log("configured QeIdentidy in "+enclaveIdTx.hash);
 
-    /* Done as a separate step, maybe we should omit this */
-    const tcbInfo = JSON.parse(fs.readFileSync(LocalConfig.TCB_INFO_FILE, 'utf8')) as TCBInfoStruct.TCBInfoStruct.tcbInfo;
-    const tcbInfoTx = await (await Andromeda.configureTcbInfoJson(tcbInfo.fmspc, tcbInfo)).wait();
-    console.log("configured tcbInfo in "+tcbInfoTx.hash);
+    for (let i = 0; i < LocalConfig.TRUSTED_MRENCLAVES.length; i++) {
+      const tx = await (await Andromeda.setMrEnclave(LocalConfig.TRUSTED_MRENCLAVES[i], true)).wait();
+      console.log("Set mr_enclave "+LocalConfig.TRUSTED_MRENCLAVES[i]+" as trusted in "+tx.hash);
+    }
+
+    for (let i = 0; i < LocalConfig.TRUSTED_MRSIGNERS.length; i++) {
+      const tx = await (await Andromeda.setMrSigner(LocalConfig.TRUSTED_MRSIGNERS[i], true)).wait();
+      console.log("Set mr_signer "+LocalConfig.TRUSTED_MRSIGNERS[i]+" as trusted in "+tx.hash);
+    }
   }
 
   const [KeyManagerSN,] = await deploy_artifact(LocalConfig.KEY_MANAGER_SN_ARTIFACT, wallet, Andromeda.target);

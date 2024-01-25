@@ -6,6 +6,12 @@
   "QE_IDENTITY_FILE": "lib/automata-dcap-v3-attestation/contracts/assets/identity.json",
   "SIGVERIFY_LIB_ARTIFACT": "out/SigVerifyLib.sol/SigVerifyLib.json",
   "ANDROMEDA_ARTIFACT": "out/Andromeda.sol/Andromeda.json",
+  "TRUSTED_MRENCLAVES": [
+    "0x2c2facadbb86dfc9989f28b09ca142e3447ad682e00384d2f4611cf690dbab61"
+  ],
+  "TRUSTED_MRSIGNERS": [
+    "0xf0365ce7081fda379914c703fe08648db1cce3747e8c10f74ff742926399f15a"
+  ],
   "KEY_MANAGER_SN_ARTIFACT": "out/KeyManager.sol/KeyManager_v0.json",
   "SEALED_AUCTION_ARTIFACT": "out/Auction.sol/SealedAuction.json",
   "TIMELOCK_ARTIFACT": "out/Timelock.sol/Timelock.json",
