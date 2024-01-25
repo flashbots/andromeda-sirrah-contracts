@@ -383,6 +383,10 @@ function App() {
           className="textbox"
           dangerouslySetInnerHTML={{ __html: consoleLog }}
         ></div>
+        <br />
+        <div>
+          No Rigil money? Get some at <a href="https://faucet.rigil.suave.flashbots.net" target="_blank">the faucet</a>
+        </div>
       </div>
     </>
   );
