@@ -16,6 +16,8 @@ The interface is defined in [./src/IAndromeda.sol](./src/IAndromeda.sol)). It ba
 function localRandom() view external returns(bytes32);
 ```
 
+This returns new random bytes each time it is called, sampled using the `RDRAND` x86 instruction.
+
 - *Process storage*
 
 ```solidity
@@ -23,11 +25,14 @@ function volatileSet(bytes32 tag, bytes32 value) external;
 function volatileGet(bytes32 tag) external returns(bytes32 value);
 ```
 
+This provides a key value storage. Each caller has its own isolated storage. If a message call reverts, it will *not* undo the side effects of `volatileSet`. All this storage is cleared each time the process restarts.
+
 - *Persistent storage*
 
 ```solidity
 function sealingKey() view external;
 ```
+This provides a persistent key. For each caller, each MRENCLAVE on each CPU gets its own one of these. This is used so the enclave can store an encrypted file and retrieve it later if the process restarts.
 
 - *Remote attestation*
 
@@ -36,13 +41,16 @@ function attestSgx(bytes32 appData) external returns (bytes memory att);
 function verifySgx(address caller, bytes32 appData, bytes memory att) external view returns (bool);`
 ```
 
-We provide three implementations:
+This produces evidence that the `appData` was requested by the `caller`. The verification routine is pure Solidity, and does not require any special precompiles.
+
+## Implementations
+We provide three implementations of the Andromeda interface:
 
 1. A forge mockup environment. This is sufficient for logical testing of smart contracts. [./src/AndromedaForge.sol](./src/AndromedaForge.sol)
-2. A remote environment using actual remote attestations, computed via a remote service (dummy attester service TODO) [./src/AndromedaRemote.sol](./src/AndromedaRemote.sol)
-3. Actually invoke the precompile addresses recognized by the MEVM.
+2. A remote environment using actual remote attestations, computed via a remote service (dummy attester service) [./src/AndromedaRemote.sol](./src/AndromedaRemote.sol)
+3. Invoke the actual the precompiles recognized by the Andromeda EVM in separate repository, [suave-andromeda-revm](https://github.com/flashbots/suave-andromeda-revm/).
 
-To reiterate, the actual implementation of these precompiles in EVM is in a [separate repository.](https://github.com/flashbots/suave-andromeda-revm/). The forge development environment here does NOT require any use of SGX, so you can develop (even on low level components like a Key Manager and TCB recovery handling) on any machine.
+To reiterate, the forge development environment here (implementations 1 and 2) does NOT require any use of SGX, so you can develop on any machine (even on TEE-level components like a Key Manager and TCB recovery handling).
 
 ## Speedrunning a Second Price auction
 
@@ -62,22 +70,7 @@ This is still a simplified strawman example, as it does not support upgrading th
 
 - ## Timelock encryption demo
 
-Configure the message to a (multiple of 32-bytes) string of your choice.
-This will use `cast` to encrypt it (obv this could be done locally).
-Then we post the ciphertext on Rigil.
-Later,
 
-```bash
-TIMELOCK=0xe06c085eebaa0b8f908E7Bc931355D681391BC8e; \
-MESSAGE='ABCDE timelock test message!32xr'; \
-CIPH=$(cast call --rpc-url=https://rpc.rigil.suave.flashbots.net --chain-id=16813125 $TIMELOCK "encryptMessage(string memory message, bytes32 r)returns(bytes)" "$MESSAGE" 0x$(head -c32 /dev/urandom | xxd -p -c64)); \
-echo Ciphertext: $CIPH; \
-cast send --legacy --rpc-url=https://rpc.rigil.suave.flashbots.net --chain-id=16813125 --private-key=$(cat privkey) $TIMELOCK "submitEncrypted(bytes)" $CIPH; \
-echo Waiting for 90 seconds...; \
-sleep 90; \
-echo Fetching result:; \
-curl http://sirrah.ln.soc1024.com/decrypt/$CIPH
-```
 
 ## Usage
 
