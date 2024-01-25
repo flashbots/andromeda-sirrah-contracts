@@ -1,35 +1,25 @@
-# React + TypeScript + Vite
+# Timelock demo WebApp
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This directory contains a demo webapp for the [Timelock contract](../src/examples/Timelock.sol).  
+You can see the live demo at `http://timelock.sirrah.suave.flashbots.net:5173`.  
 
-Currently, two official plugins are available:
+## Building and running the Timelock webapp
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+1. Make sure you have `bun` installed (`npm i --global bun`) and run `bun install` instead of the usual `npm install`
+2. Run `npm install` in the parent directory
+3. Build the webapp with `bun vite build` (alternatively `npm run build`)
+4. Run the webapp with `bun vite` (alternatively `npm run dev`)
 
-## Building
-
-Make sure you have `bun` installed (`npm i --global bun`) and run `bun install` instead of the usual `npm install`.  
-To build and run, run `bun vite build` and `bun vite` (alternatively `npm run build` and `npm run dev`.
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
-
-- Configure the top-level `parserOptions` property like this:
-
-```js
-export default {
-  // other rules...
-  parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
-    project: ['./tsconfig.json', './tsconfig.node.json'],
-    tsconfigRootDir: __dirname,
-  },
-}
+Running the Timelock demo webapp requires that you have the Timelock contract address configured in the [../deployment.json](../deployment.json) file like so:
+```
+  "ADDR_OVERRIDES": {
+    "out/Timelock.sol/Timelock.json": "0x6858162E579DFC66a623AE1bA357d67BF026dDD6"
+  }
 ```
 
-- Replace `plugin:@typescript-eslint/recommended` to `plugin:@typescript-eslint/recommended-type-checked` or `plugin:@typescript-eslint/strict-type-checked`
-- Optionally add `plugin:@typescript-eslint/stylistic-type-checked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and add `plugin:react/recommended` & `plugin:react/jsx-runtime` to the `extends` list
+If you want to build and deploy the Timelock contract from scratch, see the parent [../README.md](../README.md).  
+
+## Signing chain transactions
+
+The demo will sign chain transactions with either the raw private key (if one is provided through [../deployment.json](../deployment.json)), or with MetaMask.  
+> :warning **DO NOT PUT YOUR PRIVATE KEY IN THE DEPLOYMENT FILE IF YOU INTEND TO EXPOSE THE WEBAPP.** Since this is a React app, all of the contents of imported files could be accessible to whoever connects to your application. If you intend to expose the demo, rely on MetaMask instead.

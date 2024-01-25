@@ -96,6 +96,41 @@ For ease of use we provide the following `make` targets:
 
 Deployed contracts are kept track of in the [deployment.json](deployment.json) file. If you want to re-deploy a contract, simply remove it from the `ADDR_OVERRIDES` section. The various deployment scripts write to the file on successful deployments.
 
+## Rigil predeployed contracts
+
+If you want to build and deploy only some of the contracts, here are ones predeployed to Rigil.
+
+1. Libraries
+
+In [foundry.toml] add the following line at the end of the file:
+```
+libraries = ["src/crypto/encryption.sol:SimpleEncryption:0x10296A369d68a5DCafa30fDc9a99Af3154eF3D87", "src/crypto/encryption.sol:PKE:0xD31973ab1FEf7F0010ffae5c812A88B9a046279b", "src/crypto/secp256k1.sol:Secp256k1:0x4537Ed80812cd0740170baE40BaeC0E9F1fEeB53"]
+```
+
+2. Contracts
+
+In [deployment.json] change the `ADDR_OVERRIDES` to include:
+
+```
+  "ADDR_OVERRIDES": {
+    "out/SigVerifyLib.sol/SigVerifyLib.json": "0xed16804dB4D00A61e85569362ac10ef66126B13e",
+    "out/Andromeda.sol/Andromeda.json": "0x76832d4d9823eCD154598Ce2969D5C4e794E84c4"
+  }
+```
+
+3. Demo apps
+
+If you want to use predeployed `Timelock` demo, one is available on Rigil. Include the following in the `ADDR_OVERRIDES`:
+
+```
+  "ADDR_OVERRIDES": {
+    "out/Timelock.sol/Timelock.json": "0x6858162E579DFC66a623AE1bA357d67BF026dDD6"
+  }
+```
+
+> :warning the addresses will change, so don't depend on them too much. This is intended for quick prototyping rather than something that is highly available.
+
+
 ## License
 
 The code in this project is free software under the [MIT license](LICENSE).
