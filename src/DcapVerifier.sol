@@ -16,7 +16,9 @@ import "forge-std/Vm.sol";
 import "forge-std/StdJson.sol";
 
 contract DcapDemo is AutomataDcapV3Attestation {
-    constructor(address sigVerifyLib) AutomataDcapV3Attestation(sigVerifyLib) {}
+    constructor(address sigVerifyLib) AutomataDcapV3Attestation(sigVerifyLib) {
+        toggleLocalReportCheck();
+    }
 
     function _attestationTcbIsValid(TCBInfoStruct.TCBStatus status) internal pure override returns (bool valid) {
         // Let's be very permissive!
