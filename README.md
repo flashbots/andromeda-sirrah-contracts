@@ -66,11 +66,11 @@ The "speedrun" was a little unsatisfying because you have to bootstrap a new key
 - Multiple Kettles can join. Newly registered Kettles receive a copy of the key from existing Kettles that already have it
 - A single instance of the Key Manager contract can be used by other contracts.
 
-This is still a simplified strawman example, as it does not support upgrading the enclave, revoking keys, etc.
+This is still a simplified strawman example, as it does not support upgrading the enclave, revoking keys, etc. This is meant as a starting point, and those ideas can be explored in Solidity.
 
-- ## Timelock encryption demo
+## Timelock encryption demo
 
-
+As a final demo, we include a sample application in the form of a timelock decryption service . [./src/examples/Timelock.sol:Timelock](./src/examples/Timelock.sol).
 
 ## Usage
 
