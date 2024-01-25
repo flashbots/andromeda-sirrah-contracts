@@ -70,7 +70,14 @@ This is still a simplified strawman example, as it does not support upgrading th
 
 ## Timelock encryption demo
 
-As a final demo, we include a sample application in the form of a timelock decryption service . [./src/examples/Timelock.sol:Timelock](./src/examples/Timelock.sol).
+As a final demo, we include a sample application in the form of a timelock decryption service.
+The code is at [./src/examples/Timelock.sol:Timelock](./src/examples/Timelock.sol)
+and the smart contract is found on the Rigil test network [https://explorer.rigil.suave.flashbots.net/address/0x6858162E579DFC66a623AE1bA357d67BF026dDD6](https://explorer.rigil.suave.flashbots.net/address/0x6858162E579DFC66a623AE1bA357d67BF026dDD6).
+
+The application is very simple: messages are encrypted to the public key of the contract. A TEE kettle can only decrypt them only after the light client reports that a deadline has passed on the blockchain. 
+
+The frontend is hosted at http://timelock.sirrah.suave.flashbots.net:5173/
+You'll need to point your web3 browser extension like Metamask to [point to a Rigil endpoint](https://github.com/flashbots/suave-specs/tree/main/specs/rigil). If you don't have Rigil testnet coins you can get some at [faucet.rigil.suave.flashbots.net](https://faucet.rigil.suave.flashbots.net).
 
 ## Usage
 
