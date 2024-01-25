@@ -64,7 +64,6 @@ function App() {
     };
   }, []);
 
-
   async function connectMetamask() {
     const [account] = await window.ethereum!.request({
       method: "eth_requestAccounts",
@@ -86,7 +85,10 @@ function App() {
       transport: custom(window.ethereum!),
     });
 
-    updateConsoleLog("Using Metamask with account "+format_explorer_link({address: account}));
+    updateConsoleLog(
+      "Using Metamask with account " +
+        format_explorer_link({ address: account }),
+    );
     setSuaveWallet(suaveWallet);
   }
 
@@ -101,7 +103,10 @@ function App() {
         transport: http(LocalConfig.RPC_URL),
       });
 
-      updateConsoleLog("Using local private key for "+format_explorer_link({address: account.address}));
+      updateConsoleLog(
+        "Using local private key for " +
+          format_explorer_link({ address: account.address }),
+      );
       setSuaveWallet(suaveWallet);
     } else {
       connectMetamask().catch((e) => {
@@ -385,7 +390,10 @@ function App() {
         ></div>
         <br />
         <div>
-          No Rigil money? Get some at <a href="https://faucet.rigil.suave.flashbots.net" target="_blank">the faucet</a>
+          No Rigil money? Get some at{" "}
+          <a href="https://faucet.rigil.suave.flashbots.net" target="_blank">
+            the faucet
+          </a>
         </div>
       </div>
     </>
