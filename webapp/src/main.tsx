@@ -10,7 +10,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       debug={false}
       sdkOptions={{
         dappMetadata: {
-          name: "Example React Dapp",
+          name: "Timelock Demo",
           url: window.location.href,
         },
         // Other options
