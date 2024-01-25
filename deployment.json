@@ -1,6 +1,6 @@
 {
   "RPC_URL": "https://rpc.rigil.suave.flashbots.net",
-  "KETTLE_RPC": "http://127.0.0.1:5556",
+  "KETTLE_RPC": "http://kettle.sirrah.suave.flashbots.net:5556",
   "PRIVATE_KEY": "",
   "TCB_INFO_FILE": "lib/automata-dcap-v3-attestation/contracts/assets/tcbInfo2.json",
   "QE_IDENTITY_FILE": "lib/automata-dcap-v3-attestation/contracts/assets/identity.json",
