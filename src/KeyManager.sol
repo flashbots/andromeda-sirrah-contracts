@@ -76,11 +76,10 @@ contract KeyManager_v0 is KeyManagerBase {
         Suave = IAndromeda(_Suave);
     }
 
-    // SUAVE contract that emulates Secret Network (SN) key management
-    bytes32 public constant mrenclave = 0x0; // TODO
-
     // 1. Bootstrap phase
     function offchain_Bootstrap() public returns (address _xPub, bytes memory att) {
+        require(xPub == address(0));
+
         bytes32 xPriv_ = Suave.localRandom();
         _xPub = Secp256k1.deriveAddress(uint256(xPriv_));
         Suave.volatileSet("xPriv", xPriv_);
@@ -102,6 +101,8 @@ contract KeyManager_v0 is KeyManagerBase {
     mapping(address => bytes) registry;
 
     function offchain_Register() public returns (address addr, bytes memory myPub, bytes memory att) {
+        require(keccak256(registry[addr]) == keccak256(bytes("")));
+
         bytes32 myPriv = Suave.sealingKey("myPriv");
         myPub = PKE.derivePubKey(myPriv);
         addr = address(Secp256k1.deriveAddress(uint256(myPriv)));
