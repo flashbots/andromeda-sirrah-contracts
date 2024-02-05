@@ -6,12 +6,12 @@ import "./secp256k1.sol";
 import "./EllipticCurve.sol";
 
 library PKE {
-    function derivePubKey(bytes32 secretKey) public view returns (bytes memory) {
+    function derivePubKey(bytes32 secretKey) internal view returns (bytes memory) {
         Curve.G1Point memory p = Curve.g1mul(Curve.P1(), uint256(secretKey));
         return abi.encodePacked(p.X, p.Y);
     }
 
-    function encrypt(bytes memory pubkey, bytes32 r, bytes memory message) public view returns (bytes memory) {
+    function encrypt(bytes memory pubkey, bytes32 r, bytes memory message) internal view returns (bytes memory) {
         (uint256 gx, uint256 gy) = abi.decode(pubkey, (uint256, uint256));
         Curve.G1Point memory pub = Curve.G1Point(gx, gy);
         return _encrypt(pub, r, message);
@@ -28,7 +28,7 @@ library PKE {
         return abi.encode(mypub.X, mypub.Y, ciphertext, tag);
     }
 
-    function decrypt(bytes32 secretKey, bytes memory ciph) public view returns (bytes memory) {
+    function decrypt(bytes32 secretKey, bytes memory ciph) internal view returns (bytes memory) {
         (uint256 X, uint256 Y, bytes memory ciphertext, bytes32 tag) =
             abi.decode(ciph, (uint256, uint256, bytes, bytes32));
         Curve.G1Point memory mypub = Curve.G1Point(X, Y);
@@ -47,7 +47,7 @@ library SimpleEncryption {
         return keccak256(abi.encodePacked(key, counter));
     }
 
-    function encrypt(bytes32 key, bytes memory message) public pure returns (bytes memory ciphertext, bytes32 tag) {
+    function encrypt(bytes32 key, bytes memory message) internal pure returns (bytes memory ciphertext, bytes32 tag) {
         require(message.length % 32 == 0, "Message length should be a multiple of 32");
 
         ciphertext = new bytes(message.length);
@@ -66,7 +66,7 @@ library SimpleEncryption {
         return (ciphertext, tag);
     }
 
-    function decrypt(bytes32 key, bytes memory ciphertext, bytes32 tag) public pure returns (bytes memory) {
+    function decrypt(bytes32 key, bytes memory ciphertext, bytes32 tag) internal pure returns (bytes memory) {
         require(ciphertext.length % 32 == 0, "Ciphertext length should be a multiple of 32");
 
         // Verify the MAC
