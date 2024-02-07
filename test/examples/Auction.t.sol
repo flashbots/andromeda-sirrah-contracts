@@ -64,7 +64,7 @@ contract SealedAuctionTest is Test {
         vm.prank(bob);
         auc.submitEncrypted(bBid);
 
-        vm.roll(3);
+        vm.roll(4);
 
         // Off chain compute the solution
         (uint256 secondPrice, bytes memory sig2) = auc.offchain_Finalize();
