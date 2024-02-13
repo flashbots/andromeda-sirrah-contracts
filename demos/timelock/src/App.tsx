@@ -18,9 +18,9 @@ import {
   defineChain,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import * as LocalConfig from "../../deployment.json";
-import { kettle_advance, kettle_execute } from "../../scripts/common.ts";
-import Timelock from "../../out/Timelock.sol/Timelock.json";
+import * as LocalConfig from "../../../deployment.json";
+import { kettle_advance, kettle_execute } from "../../../scripts/common.ts";
+import Timelock from "../../../out/Timelock.sol/Timelock.json";
 
 function App() {
   const [isTimelockInitialized, setIsTimelockInitialized] = useState<
