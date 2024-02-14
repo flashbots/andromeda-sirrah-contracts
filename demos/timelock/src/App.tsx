@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import flashbotsLogo from "./assets/flashbots.png";
 import "./App.css";
 import { useSDK } from "@metamask/sdk-react";
@@ -15,17 +15,33 @@ import {
   createWalletClient,
   custom,
   http,
-  defineChain,
 } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
 import * as LocalConfig from "../../../deployment.json";
 import { kettle_advance, kettle_execute } from "../../../scripts/common.ts";
 import Timelock from "../../../out/Timelock.sol/Timelock.json";
 
+import { Provider } from "../../common/Suave";
+import {
+  ConsoleLog,
+  log_font_color,
+  format_explorer_link,
+  format_revert_string,
+  pretty_print_contract_call,
+  pretty_print_contract_result,
+} from "../../common/ConsoleLog";
+import { ConnectContract } from "../../common/Contracts";
+
+function TimelockContract(suaveProvider, suaveWallet, updateConsoleLog) {
+  return ConnectContract(
+    suaveProvider,
+    suaveWallet,
+    Timelock,
+    LocalConfig.ADDR_OVERRIDES[LocalConfig.TIMELOCK_ARTIFACT],
+    updateConsoleLog,
+  );
+}
+
 function App() {
-  const [isTimelockInitialized, setIsTimelockInitialized] = useState<
-    boolean | undefined
-  >();
   const [messagePromptHidden, setMessagePromptHidden] = useState<
     boolean | undefined
   >();
@@ -36,146 +52,16 @@ function App() {
   const [decryptedMessage, setDecryptedMessage] = useState<
     string | undefined
   >();
-  const [suaveProvider, setSuaveProvider] = useState<any>();
-  const [suaveWallet, setSuaveWallet] = useState<any>();
   const [message, setMessage] = useState("");
-  const [timelock, setTimelock] = useState<any | undefined>();
-  const [consoleLog, setConsoleLog] = useState<string>("");
 
-  function updateConsoleLog(newLog: string) {
-    const currentTime = new Date().toLocaleString("en-US", {
-      hour: "numeric",
-      minute: "numeric",
-      second: "numeric",
-      hour12: false,
-    });
-    setConsoleLog(
-      (consoleLog) =>
-        log_font_color("lightgrey", "[" + currentTime + "]: ") +
-        newLog +
-        "<br>" +
-        consoleLog,
-    );
-  }
+  const [consoleLog, updateConsoleLog] = ConsoleLog();
+  const [suaveProvider, suaveWallet] = Provider(updateConsoleLog);
 
-  useEffect(() => {
-    return () => {
-      setConsoleLog("");
-    };
-  }, []);
-
-  async function connectMetamask() {
-    const [account] = await window.ethereum!.request({
-      method: "eth_requestAccounts",
-    });
-    await window.ethereum!.request({
-      method: "wallet_addEthereumChain",
-      params: [
-        {
-          chainId: "0x1008c45",
-          chainName: "rigil",
-          rpcUrls: ["https://rpc.rigil.suave.flashbots.net"],
-        },
-      ],
-    });
-
-    const suaveWallet = createWalletClient({
-      account,
-      chain: rigilChain,
-      transport: custom(window.ethereum!),
-    });
-
-    updateConsoleLog(
-      "Using Metamask with account " +
-        format_explorer_link({ address: account }),
-    );
-    setSuaveWallet(suaveWallet);
-  }
-
-  useEffect(() => {
-    /* if LocalConfig.PRIVATE_KEY is provided, use it, otherwise connect to Metamask */
-    console.log(LocalConfig.PRIVATE_KEY.length);
-    if (LocalConfig.PRIVATE_KEY.length == 66) {
-      const account = privateKeyToAccount(LocalConfig.PRIVATE_KEY);
-      const suaveWallet = createWalletClient({
-        account,
-        chain: rigilChain,
-        transport: http(LocalConfig.RPC_URL),
-      });
-
-      updateConsoleLog(
-        "Using local private key for " +
-          format_explorer_link({ address: account.address }),
-      );
-      setSuaveWallet(suaveWallet);
-    } else {
-      connectMetamask().catch((e) => {
-        console.log("could not connect metamask: ", e);
-        throw new Error("could not connect metamask: " + e.message);
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    const suaveProvider = createPublicClient({
-      chain: rigilChain,
-      transport: http(LocalConfig.RPC_URL),
-    });
-    updateConsoleLog("Connected to SUAVE Rigil RPC at " + LocalConfig.RPC_URL);
-    setSuaveProvider(suaveProvider);
-  }, []);
-
-  useEffect(() => {
-    if (suaveProvider == undefined || suaveWallet == undefined) {
-      return;
-    }
-    // Create contract instance
-    const ADDR_OVERRIDES: { [key: string]: any } = LocalConfig.ADDR_OVERRIDES;
-    const timelock = getContract({
-      address: ADDR_OVERRIDES[LocalConfig.TIMELOCK_ARTIFACT],
-      abi: Timelock.abi,
-      client: {
-        public: suaveProvider,
-        wallet: suaveWallet,
-      },
-    });
-    updateConsoleLog(
-      "Using Timelock contract at " +
-        format_explorer_link({ address: timelock.address }),
-    );
-    setTimelock(timelock);
-  }, [suaveProvider, suaveWallet]);
-
-  useEffect(() => {
-    if (isTimelockInitialized) {
-      return;
-    }
-
-    checkTimelockIsInitialized();
-    const timerCheckTimelockIsInitialized = setInterval(async () => {
-      await checkTimelockIsInitialized(isTimelockInitialized);
-    }, 1000); // Update every second
-
-    // Clean up the interval on component unmount
-    return () => {
-      clearInterval(timerCheckTimelockIsInitialized);
-    };
-  }, [timelock, isTimelockInitialized]);
-
-  async function checkTimelockIsInitialized(isTimelockInitialized) {
-    if (isTimelockInitialized) {
-      return;
-    }
-
-    const isInitialized = await timelock?.read.isInitialized();
-    if (isInitialized) {
-      updateConsoleLog("Timelock contract is initialized properly");
-      setIsTimelockInitialized(true);
-    } else {
-      console.log("Timelock is still not initialized");
-      setIsTimelockInitialized(false);
-    }
-  }
+  const [isTimelockInitialized, timelock] = TimelockContract(
+    suaveProvider,
+    suaveWallet,
+    updateConsoleLog,
+  );
 
   useEffect(() => {
     if (!encryptedMessage || decryptedMessage) {
@@ -403,97 +289,5 @@ function App() {
 function assert(condition: unknown, msg?: string): asserts condition {
   if (condition === false) throw new Error(msg);
 }
-
-function pretty_print_contract_call(abi, inputs) {
-  assert(abi.inputs.length == inputs.length);
-
-  const fn = abi.type + " " + abi.name;
-  let args = "";
-  for (let i = 0; i < abi.inputs.length; i++) {
-    args += abi.inputs[i].type + " " + abi.inputs[i].name + ": " + inputs[i];
-    if (i + 1 != abi.inputs.length) {
-      args += ", ";
-    }
-  }
-
-  return fn + "(" + args + ")";
-}
-
-function pretty_print_contract_result(methodAbi, rawOutput: "0x{string}") {
-  const decodedResult = decodeFunctionResult({
-    abi: [methodAbi],
-    data: rawOutput,
-  });
-
-  if (decodedResult == null) {
-    throw new Error("unable to decode result");
-  }
-
-  if (typeof decodedResult != "object") {
-    assert(methodAbi.outputs.length == 1);
-    return (
-      "[" +
-      methodAbi.outputs[0].type +
-      " " +
-      methodAbi.outputs[0].name +
-      ": " +
-      decodedResult +
-      "]"
-    );
-  }
-
-  let res = "[";
-  for (let i = 0; i < methodAbi.outputs.length; i++) {
-    res +=
-      methodAbi.outputs[i].type +
-      " " +
-      methodAbi.outputs[i].name +
-      ": " +
-      decodedResult[methodAbi.outputs[i].name];
-    if (i + 1 != methodAbi.outputs.length) {
-      res += ", ";
-    }
-  }
-
-  res += "]";
-  return res;
-}
-
-function format_revert_string(rawOutput: "0x{string}") {
-  return decodeFunctionData({
-    abi: [
-      {
-        inputs: [{ name: "error", type: "string" }],
-        name: "Error",
-        type: "function",
-      },
-    ],
-    data: rawOutput,
-  }).args[0];
-}
-
-function log_font_color(color: string, str: string) {
-  return '<font color="' + color + '">' + str + "</font>";
-}
-
-// Sometimes TX
-function format_explorer_link(target: { address?: string; tx?: string }) {
-  const link =
-    target.address !== undefined
-      ? "https://explorer.rigil.suave.flashbots.net/address/" + target.address
-      : "https://explorer.rigil.suave.flashbots.net/tx/" + target.tx;
-  const value = target.address !== undefined ? target.address : target.tx;
-  return '<a target="_blank" href=' + link + ">" + value + "</a>";
-}
-
-const rigilChain = defineChain({
-  id: 16813125,
-  name: "Rigil",
-  rpcUrls: {
-    default: {
-      http: ["https://rpc.rigil.suave.flashbots.net"],
-    },
-  },
-});
 
 export default App;

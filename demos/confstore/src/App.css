@@ -1,0 +1,128 @@
+html,body,#root,#root>div {
+  height: 100%;
+}
+
+#root {
+  min-width: 80%;
+  max-width: 80%;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.textbox {
+  text-align: left;
+  min-height: 16em;
+  max-height: 16em;
+  min-width: 100%;
+  overflow-wrap: anywhere;
+  overflow-y: scroll;
+  background-color: #000;
+  border: 1px solid #000;
+  color: #00ff00;
+  padding: 8px;
+  font-family: courier new;
+  border-radius: 12px;
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+
+/* Bundle submission */
+.bundleform {
+  width: 80%;
+  margin: 0 auto;
+  border: 2px solid lightgrey;
+  border-radius: 12px;
+  padding: 1em;
+  padding-right: 1.6em;
+}
+
+.bundleform > div {
+  width: 100%;
+  margin-bottom: 1em;
+  text-align: left;
+}
+
+.bundleform > div > label {
+  display: inline-block;
+  font-weight: bold;
+}
+
+.bundleform > div > input,textarea {
+  width: 100%;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 0.3em;
+}
+
+.bundleform > button {
+  padding: 8px 16px;
+  background-color: #67a26a;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.bundleform > button:hover {
+  background-color: #45a049;
+}
+
+.bundleTable {
+  margin: 0 auto;
+  border: 2px solid lightgrey;
+  border-radius: 12px;
+  padding: 1em;
+  width: 80%;
+}
+
+.bundleTable > thead > tr > th {
+  border-bottom: 2px solid lightgrey;
+}
+
+.bundleTable > thead > tr > th:nth-child(1) {
+  width: 20%;
+}
+
+.bundleTable > thead > tr > th:nth-child(2) {
+  width: 60%;
+}
+
+.bundleTable > thead > tr > th:nth-child(3) {
+  width: 20%;
+}
