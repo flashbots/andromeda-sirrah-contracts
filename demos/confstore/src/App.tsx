@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { React, useEffect, useState, useRef } from "react";
 import flashbotsLogo from "./assets/flashbots.png";
 import "./App.css";
 import { useSDK } from "@metamask/sdk-react";
@@ -63,13 +63,6 @@ function BundleSubmission({
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    window.formValues = formValues;
-    window.storeContract = storeContract;
-
-    console.log([
-      [formValues.height, formValues.transaction, formValues.profit],
-      toHex(crypto.getRandomValues(new Uint8Array(32))),
-    ]);
     const encryptedBundleBytes = await storeContract.read.encryptBundle([
       [formValues.height, formValues.transaction, formValues.profit],
       toHex(crypto.getRandomValues(new Uint8Array(32))),
@@ -109,38 +102,42 @@ function BundleSubmission({
     <div>
       <h2>Submit bundle</h2>
       <form onSubmit={handleSubmit} className="bundleform">
-        <div>
-          <label htmlFor="height">BlockHeight</label>
-          <input
-            type="number"
-            id="height"
-            name="height"
-            value={formValues.height}
-            onChange={handleChange}
-          />
+        <div style={{display: "inline-block"}}>
+          <div style={{float: "left"}}>
+            <label htmlFor="height">BlockHeight</label>
+            <input
+              type="number"
+              id="height"
+              name="height"
+              value={formValues.height}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div style={{float: "right"}}>
+            <label htmlFor="profit">Profit</label>
+            <input
+              type="number"
+              id="profit"
+              name="profit"
+              value={formValues.profit}
+              onChange={handleChange}
+            />
+          </div>
         </div>
 
         <div>
-          <label htmlFor="transaction">Transaction</label>
-          <textarea
-            id="transaction"
-            name="transaction"
-            value={formValues.transaction}
-            onChange={handleChange}
-            rows="4"
-            cols="50"
-          ></textarea>
-        </div>
-
-        <div>
-          <label htmlFor="profit">Profit</label>
-          <input
-            type="number"
-            id="profit"
-            name="profit"
-            value={formValues.profit}
-            onChange={handleChange}
-          />
+          <div>
+            <label htmlFor="transaction">Transaction</label>
+            <textarea
+              id="transaction"
+              name="transaction"
+              value={formValues.transaction}
+              onChange={handleChange}
+              rows="4"
+              cols="50"
+            ></textarea>
+          </div>
         </div>
 
         <button type="submit">Submit</button>
@@ -148,6 +145,169 @@ function BundleSubmission({
     </div>
   );
 }
+
+function StoreBundleFetcher({
+  updateConsoleLog,
+  suaveProvider,
+  suaveWallet,
+  storeContract,
+}) {
+  const [isModalOpen, setModalOpen] = useState(false);
+  const [modalData, setModalData] = useState([]);
+  const [formValues, setFormValues] = useState({
+    height: "10",
+  });
+
+  const handleChange = (e) => {
+    setFormValues({
+      ...formValues,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const fetchAbi = getAbiItem({
+      abi: storeContract.abi,
+      name: "dbg_getBundlesByHeight",
+    });
+    const data = encodeFunctionData({ abi: [fetchAbi], args: [formValues.height] });
+
+    const resp = await kettle_execute(
+      LocalConfig.KETTLE_RPC,
+      storeContract.address,
+      data.toString(),
+    );
+
+    const callLog = pretty_print_contract_call(fetchAbi, [formValues.height]);
+    const executionResult = JSON.parse(resp);
+    if (executionResult.Success === undefined) {
+      updateConsoleLog(
+        "Kettle refused to get bundles by height: " +
+          callLog +
+          log_font_color(
+            "red",
+            ' error: "' +
+              format_revert_string(executionResult.Revert.output) +
+              '"',
+          ),
+      );
+      return false;
+    }
+
+    const decodedResult = decodeFunctionResult({
+      abi: [fetchAbi],
+      data: executionResult.Success.output.Call,
+    });
+
+    if (decodedResult == null) {
+      throw new Error("unable to decode result");
+    }
+
+    updateConsoleLog(
+      "Fetched "+decodedResult.length+" bundles targetting height " +formValues.height
+    );
+
+    setModalData(decodedResult.map(parseBundleBigints));
+    setModalOpen(true);
+  };
+
+  return (
+    <div>
+      <form onSubmit={handleSubmit} className="bundleform"  style={{display: "inline-flex", margin: "0 auto"}}>
+        <div>
+          <div>
+            <label htmlFor="height">BlockHeight</label>
+            <input
+              type="number"
+              id="height"
+              name="height"
+              value={formValues.height}
+              onChange={handleChange}
+            />
+          </div>
+        </div>
+        <button type="submit" style={{margin_left: "auto"}}>Fetch bundles by height</button>
+      </form>
+      <Modal
+        hasCloseButton={false}
+        isOpen={isModalOpen}
+        onClose={() => { setModalOpen(false); }}
+      >
+        <h3>Bundles targetting block {formValues.height}</h3>
+        <table className="bundleTable">
+          <thead>
+            <tr>
+              <th>height</th>
+              <th>transaction</th>
+              <th>profit</th>
+            </tr>
+          </thead>
+          <tbody>
+            { modalData.map((b, i) => (
+              <tr key={i}>
+                <td>{b.height}</td>
+                <td>{b.transaction}</td>
+                <td>{b.profit}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Modal>
+    </div>
+  );
+}
+
+interface ModalProps {
+  isOpen: boolean;
+  hasCloseBtn?: boolean;
+  onClose?: () => void;
+  children: React.ReactNode;
+};
+const Modal: React.FC<MOdalProps> = ({ isOpen, hasCloseBtn, onClose, children }) => {
+  const [isModalOpen, setModalOpen] = useState(isOpen);
+  const modalRef = useRef<HTMLDialogElement | null>(null);
+
+  useEffect(() => {
+    setModalOpen(isOpen);
+  }, [isOpen]);
+
+  useEffect(() => {
+    const modalElement = modalRef.current;
+    if (modalElement) {
+      if (isModalOpen) {
+        modalElement.showModal();
+      } else {
+        modalElement.close();
+      }
+    }
+  }, [isModalOpen]);
+
+  const handleCloseModal = () => {
+    if (onClose) {
+      onClose();
+    }
+    setModalOpen(false);
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDialogElement>) => {
+    if (event.key === "Escape") {
+      handleCloseModal();
+    }
+  };
+
+  return (
+    <dialog ref={modalRef} onKeyDown={handleKeyDown}>
+      {hasCloseBtn && (
+        <button className="modal-close-btn" onClick={handleCloseModal}>
+          Close
+        </button>
+      )}
+      {children}
+    </dialog>
+  );
+};
 
 function BundleViewer({
   updateConsoleLog,
@@ -246,7 +406,6 @@ function BundleViewer({
     if (decodedResult == null) {
       throw new Error("unable to decode result");
     }
-    console.log(decodedResult);
 
     if (!decodedResult[0]) {
       return false;
@@ -258,17 +417,8 @@ function BundleViewer({
     }
 
     const bundleDecorator = (i, v) => {
-      console.log("BD", i, v);
       if (i != 2) return v;
-      return (
-        "(" +
-        v.height.toString() +
-        ", " +
-        v.transaction +
-        ", " +
-        v.profit.toString() +
-        ")"
-      );
+      return JSON.stringify(parseBundleBigints(v));
     };
     updateConsoleLog(
       "Bundle message received: " +
@@ -282,11 +432,7 @@ function BundleViewer({
     );
 
     const bundle = decodedResult[2];
-    addBundle({
-      height: bundle.height.toString(),
-      transaction: bundle.transaction,
-      profit: bundle.profit.toString(),
-    });
+    addBundle(parseBundleBigints(bundle));
 
     return true;
   }
@@ -294,24 +440,26 @@ function BundleViewer({
   return (
     <>
       <h2>Bundles received</h2>
-      <table className="bundleTable">
-        <thead>
-          <tr>
-            <th>height</th>
-            <th>transaction</th>
-            <th>profit</th>
-          </tr>
-        </thead>
-        <tbody>
-          {bundles.map((b, i) => (
-            <tr key={i}>
-              <td>{b.height}</td>
-              <td>{b.transaction}</td>
-              <td>{b.profit}</td>
+      <div style={{ height: "24em", overflowY: "scroll", width: "100%"}}>
+        <table className="bundleTable">
+          <thead>
+            <tr>
+              <th>height</th>
+              <th>transaction</th>
+              <th>profit</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {bundles.map((b, i) => (
+              <tr key={i}>
+                <td>{b.height}</td>
+                <td>{b.transaction}</td>
+                <td>{b.profit}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </>
   );
 }
@@ -342,7 +490,7 @@ function App() {
 
   return (
     <div style={{ height: "100%" }}>
-      <div style={{ height: "15%" }}>
+      <div>
         <a href="https://www.flashbots.net" target="_blank">
           <img src={flashbotsLogo} className="logo" alt="Flashbots logo" />
         </a>
@@ -361,23 +509,23 @@ function App() {
       )}
 
       {isContractInitialized && (
-        <div style={{ width: "100%", height: "85%" }}>
-          <div style={{ float: "left", width: "50%", height: "50%" }}>
+        <div style={{ width: "100%" }}>
+          <div style={{ float: "left", width: "50%", min_height: "fit-content" }}>
             <BundleSubmission
               updateConsoleLog={updateConsoleLog}
               suaveProvider={suaveProvider}
               suaveWallet={suaveWallet}
               storeContract={storeContract}
             />
+            <br />
+            <StoreBundleFetcher
+              updateConsoleLog={updateConsoleLog}
+              suaveProvider={suaveProvider}
+              suaveWallet={suaveWallet}
+              storeContract={storeContract}
+            />
           </div>
-          <div
-            style={{
-              float: "right",
-              width: "50%",
-              height: "50%",
-              overflow: "scroll",
-            }}
-          >
+          <div style={{ float: "right", width: "50%"}}>
             <BundleViewer
               updateConsoleLog={updateConsoleLog}
               suaveProvider={suaveProvider}
@@ -385,26 +533,32 @@ function App() {
               storeContract={storeContract}
             />
           </div>
-          <div style={{ clear: "both", height: "40%" }}>
-            <br />
-            <br />
-            <ConsoleLogViewer consoleLog={consoleLog} />
-          </div>
-          <div style={{ height: "10%" }}>
-            <br />
-            No Rigil money? Get some at{" "}
-            <a href="https://faucet.rigil.suave.flashbots.net" target="_blank">
-              the faucet
-            </a>
-          </div>
         </div>
       )}
+        <div style={{ clear: "both"}}>
+          <br />
+          <br />
+          <ConsoleLogViewer consoleLog={consoleLog} />
+          <br />
+          No Rigil money? Get some at{" "}
+          <a href="https://faucet.rigil.suave.flashbots.net" target="_blank">
+            the faucet
+          </a>
+        </div>
     </div>
   );
 }
 
 function assert(condition: unknown, msg?: string): asserts condition {
   if (condition === false) throw new Error(msg);
+}
+
+function parseBundleBigints(bundle) {
+  return {
+    height: bundle.height.toString(),
+    transaction: bundle.transaction,
+    profit: bundle.profit.toString(),
+  };
 }
 
 export default App;

@@ -64,6 +64,7 @@ html,body,#root,#root>div {
 
 /* Bundle submission */
 .bundleform {
+  margin: 0 auto;
   width: 80%;
   margin: 0 auto;
   border: 2px solid lightgrey;
@@ -74,16 +75,21 @@ html,body,#root,#root>div {
 
 .bundleform > div {
   width: 100%;
-  margin-bottom: 1em;
+  margin-bottom: 0.5em;
   text-align: left;
 }
 
-.bundleform > div > label {
+.bundleform > div:first-child > div {
+  width: 45%;
+  text-align: left;
+}
+
+.bundleform > div > div > label {
   display: inline-block;
   font-weight: bold;
 }
 
-.bundleform > div > input,textarea {
+.bundleform > div > div > input,textarea {
   width: 100%;
   border: 1px solid #ccc;
   border-radius: 4px;
@@ -115,14 +121,14 @@ html,body,#root,#root>div {
   border-bottom: 2px solid lightgrey;
 }
 
-.bundleTable > thead > tr > th:nth-child(1) {
+.bundleTable tr > *:nth-child(1) {
   width: 20%;
 }
 
-.bundleTable > thead > tr > th:nth-child(2) {
+.bundleTable tr > *:nth-child(2) {
   width: 60%;
 }
 
-.bundleTable > thead > tr > th:nth-child(3) {
+.bundleTable tr > *:nth-child(3) {
   width: 20%;
 }
