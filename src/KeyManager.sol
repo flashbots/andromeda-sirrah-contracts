@@ -136,4 +136,12 @@ contract KeyManager_v0 is KeyManagerBase {
         require(Secp256k1.deriveAddress(uint256(xPriv_)) == xPub);
         Suave.volatileSet("xPriv", xPriv_);
     }
+
+    function testing(bytes memory data) public returns(bytes32 left, bytes32 right) {
+        bytes memory digest =  Suave.sha512(data);    
+        assembly {
+        left := mload(add(digest, 32)) // Load first 32 bytes
+        right := mload(add(digest, 64)) // Load second 32 bytes
+        }
+    }
 }

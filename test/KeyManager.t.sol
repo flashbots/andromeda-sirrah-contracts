@@ -25,6 +25,12 @@ contract KeyManager_v0_Test is Test {
     }
 
     function testKeyManager() public {
+        (bytes32 left, bytes32 right) = keymgr.testing("test");
+        // log left and right
+        console2.logBytes32(left);
+        console2.logBytes32(right);
+
+
         // 1. Bootstrap
         // 1a. Offchain generate the key
         andromeda.switchHost("alice");

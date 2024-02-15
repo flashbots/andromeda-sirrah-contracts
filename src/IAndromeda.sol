@@ -10,4 +10,5 @@ interface IAndromeda {
     function volatileGet(bytes32 tag) external returns (bytes32);
     function localRandom() external view returns (bytes32);
     function sealingKey(bytes32 tag) external view returns (bytes32);
+    function sha512(bytes memory data) external view returns (bytes memory);
 }

@@ -14,6 +14,8 @@ contract Andromeda is IAndromeda, DcapDemo {
     address public constant VOLATILEGET_ADDR = 0x0000000000000000000000000000000000040702;
     address public constant RANDOM_ADDR = 0x0000000000000000000000000000000000040703;
     address public constant SEALINGKEY_ADDR = 0x0000000000000000000000000000000000040704;
+    address public constant SHA512_ADDR      = 0x0000000000000000000000000000000000050700;
+
 
     function volatileSet(bytes32 key, bytes32 value) external override {
         bytes memory cdata = abi.encodePacked([key, value]);
@@ -57,5 +59,13 @@ contract Andromeda is IAndromeda, DcapDemo {
         require(success);
         require(sealingBytes.length == 32);
         return bytes32(keccak256(abi.encode(bytes32(sealingBytes), key)));
+    }
+
+    function sha512(bytes memory data) public view returns (bytes memory) {
+        require(data.length > 0, "Andromeda: data length must be greater than 0");
+        (bool success, bytes memory digest) = SHA512_ADDR.staticcall(data);
+        require(success);
+        require(digest.length == 64);
+        return digest;
     }
 }
