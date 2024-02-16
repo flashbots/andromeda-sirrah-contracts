@@ -1,5 +1,5 @@
 import { React, useEffect, useState, useRef } from "react";
-import flashbotsLogo from "./assets/flashbots.png";
+import flashbotsLogo from "../../common/assets/flashbots.png";
 import "./App.css";
 import { useSDK } from "@metamask/sdk-react";
 import {
