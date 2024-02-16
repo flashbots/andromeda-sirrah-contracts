@@ -61,11 +61,11 @@ contract Andromeda is IAndromeda, DcapDemo {
         return bytes32(keccak256(abi.encode(bytes32(sealingBytes), key)));
     }
 
-    function sha512(bytes memory data) public view returns (bytes memory) {
+    function sha512(bytes memory data) external view returns (bytes memory) {
         require(data.length > 0, "Andromeda: data length must be greater than 0");
-        (bool success, bytes memory digest) = SHA512_ADDR.staticcall(data);
+        (bool success, bytes memory output) = SHA512_ADDR.staticcall(data);
         require(success);
-        require(digest.length == 64);
-        return digest;
+        require(output.length == 64);
+        return output;
     }
 }
