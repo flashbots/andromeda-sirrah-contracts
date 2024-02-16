@@ -1,6 +1,6 @@
 pragma solidity ^0.8.13;
 
-import "../../lib/revm-services/Interfaces.sol";
+import "../../lib/revm-services/ExternalServices.sol";
 import "../crypto/secp256k1.sol";
 import "../crypto/encryption.sol";
 

@@ -43,9 +43,24 @@ function verifySgx(address caller, bytes32 appData, bytes memory att) external v
 
 This produces evidence that the `appData` was requested by the `caller`. The verification routine is pure Solidity, and does not require any special precompiles.
 
-- *Services manager*
+- *External services*
 
-// TODO
+Currently there are two external services defined: redis (persistent) key-value store and redis pubsub:
+```solidity
+interface Redis {
+    function set(string memory key, bytes memory value) external;
+    function get(string memory key) external returns (bytes memory);
+}
+interface RedisPubsub {
+    function publish(string memory topic, bytes memory msg) external;
+    function get_message(string memory topic) external returns (bytes memory);
+    function subscribe(string memory topic) external;
+    function unsubscribe(string memory topic) external;
+}
+```
+
+For interacting with external services see [lib/revm-services/Interfaces.sol](lib/revm-services/Interfaces.sol) and the [RedisConfidentialStore example contract](src/examples/RedisConfidentialStore.sol).
+
 
 ## Implementations
 We provide three implementations of the Andromeda interface:
@@ -80,12 +95,16 @@ and the smart contract is found on the Rigil test network [https://explorer.rigi
 
 The application is very simple: messages are encrypted to the public key of the contract. A TEE kettle can only decrypt them only after the light client reports that a deadline has passed on the blockchain. 
 
-The frontend is hosted at https://timelock.sirrah.suave.flashbots.net/
+The frontend is hosted at https://timelock.sirrah.suave.flashbots.net/  
 You'll need to point your web3 browser extension like Metamask to [point to a Rigil endpoint](https://github.com/flashbots/suave-specs/tree/main/specs/rigil). If you don't have Rigil testnet coins you can get some at [faucet.rigil.suave.flashbots.net](https://faucet.rigil.suave.flashbots.net).
 
 ## Confidential bundle store demo
 
-// TODO
+In another demo, [RedisConfidentialStore](./src/examples/RedisConfidentialStore.sol), we show how we can use redis's key-value store and pubsub to implement a replicated bundle database which preserves integrity and confidentiality.  
+This specific demo aims to bring us closer to feature parity with Rigil by implementing the [confidential data store](https://suave.flashbots.net/technical/specs/rigil/confidential-data-store).  
+
+This demo is also very simple, and allows inserting bundles, indexing them (by the block they target), and fetching them. The demo is built in a way that also allows replicating bundles across multiple kettles (as long as they are onboarded to the same key manager - not shown on the demo).  
+The RedisConfidentialStore contract is deployed to the Rigil testnet, and can be found at [https://explorer.rigil.suave.flashbots.net/address/0xF1b9942f1DBf1dD9538FC2ee8e2FC533b7070366](https://explorer.rigil.suave.flashbots.net/address/0xF1b9942f1DBf1dD9538FC2ee8e2FC533b7070366).
 
 ## Usage
 
