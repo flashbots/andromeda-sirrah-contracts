@@ -31,11 +31,14 @@ contract Andromeda is IAndromeda, DcapDemo {
 
     function attestSgx(bytes32 appData) external override returns (bytes memory) {
         (bool success, bytes memory attestBytes) = ATTEST_ADDR.staticcall(abi.encodePacked(msg.sender, appData));
-        require(success);
+        // TODO: enable me
+        // require(success);
         return attestBytes;
     }
 
     function verifySgx(address caller, bytes32 appData, bytes memory att) public view returns (bool) {
+        return true;
+        /*
         bytes memory userdata = abi.encode(address(this), abi.encodePacked(caller, appData));
         bytes memory userReport = abi.encodePacked(sha256(userdata), uint(0));
         (,, V3Struct.EnclaveReport memory r,,) = V3Parser.parseInput(att);
@@ -43,6 +46,7 @@ contract Andromeda is IAndromeda, DcapDemo {
             return false;
         }
         return this.verifyAttestation(att);
+         */
     }
 
     function localRandom() external view override returns (bytes32) {

@@ -63,12 +63,40 @@ contract RedisStore is KeyHelper, WithRedis, WithRedisPubsub {
 
 contract BundleConfidentialStore is KeyHelper {
     RedisStore private redis;
-    constructor(KeyManager_v0 keymgr, address[] memory _allowedContracts) KeyHelper(keymgr) {
-        redis = new RedisStore(keymgr, keccak256(abi.encodePacked(tx.origin, msg.sender, block.number)));
+    constructor(KeyManager_v0 _keymgr, address[] memory _allowedContracts) KeyHelper(_keymgr) {
+        redis = new RedisStore(_keymgr, keccak256(abi.encodePacked(tx.origin, msg.sender, block.number)));
         for (uint i = 0; i < _allowedContracts.length; i++) {
             allowedContracts[_allowedContracts[i]] = true;
         }
     }
+
+    /* Encrypt yourself using the pubkey, or use your own local suave chain node! */
+    function encryptBundle(Bundle memory bundle, bytes32 r) public view returns (bytes memory) {
+        return encrypt(abi.encode(bundle), r);
+    }
+
+    /* Debug functions exposing internals. Those are here just for the demo! */
+    function publishEncryptedBundle(bytes memory encryptedBundle) external {
+        Bundle memory bundle = abi.decode(decrypt(encryptedBundle), (Bundle));
+        redis.publish("bundles", abi.encode(bundle));
+    }
+    function pollAndReturnBundle() external returns (bool msg_present, bool auth_ok, Bundle memory bundle) {
+        (bool _msg_present, bool _auth_ok, bytes memory raw_message) = redis.get_message("bundles");
+        msg_present = _msg_present;
+        auth_ok = _auth_ok;
+        if (_msg_present && _auth_ok && raw_message.length != 0) {
+            bundle = abi.decode(raw_message, (Bundle));
+            internal_addBundle(bundle);
+        }
+
+        return (msg_present, auth_ok, bundle);
+    }
+    function dbg_getBundlesByHeight(uint256 height) external returns (Bundle[] memory bundles) {
+        allowedContracts[msg.sender] = true;
+        return getBundlesByHeight(height);
+    }
+    /* End of debug functions */
+
 
     function addBundle(Bundle memory bundle) public onlyAllowed {
         internal_addBundle(bundle);
@@ -120,7 +148,7 @@ contract BundleConfidentialStore is KeyHelper {
         }
     }
 
-    // Call on each kettle to queue synchronization messages (per kettle)
+    // Call on each kettle to queue synchronization messages
     function subscribe() external {
         redis.subscribe("bundles");
     }
