@@ -50,10 +50,9 @@ contract BIP32Forge is ICrypto {
     }
 
     function split(bytes memory data) public view returns(bytes32 key, bytes32 chain_code) {
-        bytes memory digest = this.sha512(data);    
         assembly {
-        key := mload(add(digest, 32)) // Load first 32 bytes
-        chain_code := mload(add(digest, 64)) // Load second 32 bytes
+        key := mload(add(data, 32)) // Load first 32 bytes
+        chain_code := mload(add(data, 64)) // Load second 32 bytes
         }
     }
 
@@ -130,7 +129,6 @@ contract BIP32Forge is ICrypto {
         // in case the last character of the path is not a ' or /
         if(pathBytes[pathBytes.length - 1] != bytes1('\'')) {
             (xPriv, xPub) = deriveChildKeyPair(data, index);
-            
         }    
     }
 }

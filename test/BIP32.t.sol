@@ -11,16 +11,7 @@ contract BIP32_Test is Test {
         bip32 = new BIP32Forge();
     }
 
-    function testSplitFunction() public view{
-        bytes memory data = "test";
-        (bytes32 left, bytes32 right) = bip32.split(data);
-        //console2.logBytes32(left);
-        //console2.logBytes32(right);    
-        bytes32 expected_left  = 0xee26b0dd4af7e749aa1a8ee3c10ae9923f618980772e473f8819a5d4940e0db2;
-        bytes32 expected_right = 0x7ac185f8a0e1d5f84f88bc887fd67b143732c304cc5fa9ad8e6f57f50028a8ff;   
-        require(left == expected_left);
-        require(right == expected_right);
-    }
+    
     function testSHA512() public view{
         bytes memory data = "test";
         bytes memory result = bip32.sha512(abi.encodePacked(data));
@@ -29,6 +20,17 @@ contract BIP32_Test is Test {
         require(keccak256(result) == keccak256(expected)); 
     }
     
+    function testSplitFunction() public view{
+        bytes memory data = bip32.sha512("test");
+        (bytes32 left, bytes32 right) = bip32.split(data);
+        //console2.logBytes32(left);
+        //console2.logBytes32(right);    
+        bytes32 expected_left  = 0xee26b0dd4af7e749aa1a8ee3c10ae9923f618980772e473f8819a5d4940e0db2;
+        bytes32 expected_right = 0x7ac185f8a0e1d5f84f88bc887fd67b143732c304cc5fa9ad8e6f57f50028a8ff;   
+        require(left == expected_left);
+        require(right == expected_right);
+    }
+
     function testDeriveKey() public view{
         bytes memory seed = abi.encodePacked(hex"000102030405060708090a0b0c0d0e0f");
         //bytes memory seed = abi.encodePacked(bip32.localRandom());
@@ -37,7 +39,7 @@ contract BIP32_Test is Test {
         
         (BIP32Forge.ExtendedPrivateKey memory xPriv) = bip32.newFromSeed(seed);
         console2.logBytes32(xPriv.key);
-        
+        // 
 
         //(BIP32Forge.ExtendedPrivateKey memory xxPriv, BIP32Forge.ExtendedPublicKey memory cXPub) = bip32.deriveChildKeyPair(xPriv, 0);
         //console2.logBytes32(xxPriv.attributes.chainCode);

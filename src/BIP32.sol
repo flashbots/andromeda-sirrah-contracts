@@ -52,10 +52,9 @@ contract BIP32 is ICrypto {
     }
 
     function split(bytes memory data) internal view returns(bytes32 key, bytes32 chain_code) {
-        bytes memory digest = this.sha512(data);    
         assembly {
-        key := mload(add(digest, 32)) // Load first 32 bytes
-        chain_code := mload(add(digest, 64)) // Load second 32 bytes
+        key := mload(add(data, 32)) // Load first 32 bytes
+        chain_code := mload(add(data, 64)) // Load second 32 bytes
         }
     }
 
