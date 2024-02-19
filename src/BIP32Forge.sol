@@ -4,7 +4,11 @@ pragma solidity ^0.8.8;
 import {ICrypto} from "src/ICrypto.sol";
 import {PKE} from "../src/crypto/encryption.sol";
 
-contract BIP32 is ICrypto {
+interface Vm {
+    function ffi(string[] calldata commandInput) external view returns (bytes memory result);
+}
+
+contract BIP32Forge is ICrypto {
     struct ExtendedKeyAttributes {
         // Depth in the key derivation heirarchy
         uint8 depth;
@@ -22,36 +26,30 @@ contract BIP32 is ICrypto {
         ExtendedKeyAttributes attributes;
     }
     
-    // The master extended private keys
-    /*ExtendedPrivateKey private xPriv;
-    ExtendedPublicKey public xPub;
-
-    constructor (bytes memory seed) {
-        xPriv = newFromSeed(seed);
-        xPub = ExtendedPublicKey(PKE.derivePubKey(xPriv.key), xPriv.attributes);
-    }
-
-    // get master public key
-    function getMasterPub() external view returns (bytes memory) {
-        return PKE.derivePubKey(xPriv.key);
-    }
-    */
+    Vm constant vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
     // Derivation domain separator for BIP39 keys array 
     bytes public constant BIP32_DERIVATION_DOMAIN = hex"426974636f696e2073656564";
-    
-    // The address of the SHA512 precompile 
-    address public constant SHA512_ADDR = 0x0000000000000000000000000000000000050700;
 
-    function sha512(bytes memory data) external view returns (bytes memory) {
+
+    function sha512(bytes memory data) external view override returns (bytes memory) {
         require(data.length > 0, "sha512: data length must be greater than 0");
-        (bool success, bytes memory output) = SHA512_ADDR.staticcall(data);
-        require(success);
-        require(output.length == 64);
-        return output;
+        string[] memory inputs = new string[](3);
+        inputs[0] = "sh";
+        inputs[1] = "ffi/sha512.sh";
+        inputs[2] = string(data);
+        return vm.ffi(inputs);
     }
 
-    function split(bytes memory data) internal view returns(bytes32 key, bytes32 chain_code) {
+    function localRandom() public view returns (bytes32) {
+        string[] memory inputs = new string[](2);
+        inputs[0] = "sh";
+        inputs[1] = "ffi/local_random.sh";
+        bytes memory res = vm.ffi(inputs);
+        return bytes32(res);
+    }
+
+    function split(bytes memory data) public view returns(bytes32 key, bytes32 chain_code) {
         bytes memory digest = this.sha512(data);    
         assembly {
         key := mload(add(digest, 32)) // Load first 32 bytes
@@ -61,14 +59,14 @@ contract BIP32 is ICrypto {
 
 
     // This will be applied on the parent public key when generating the child pub/priv key
-    function fingerprint(bytes memory key) internal pure returns (uint32) {
+    function fingerprint(bytes memory key) public pure returns (uint32) {
         bytes32 digest = ripemd160(abi.encodePacked(keccak256(abi.encodePacked(key))));
         // return the first 4 bytes of the digest as a uint32
         return uint32(uint256(digest) >> 224);
     }
 
     // Based on the context, it generates either the extended private key or extended public key
-    function newFromSeed(bytes memory seed) internal view returns (ExtendedPrivateKey memory) {
+    function newFromSeed(bytes memory seed) public view returns (ExtendedPrivateKey memory) {
         // if seed length is not 16 32 or 64 bytes, throw
         require(seed.length == 16 || seed.length == 32 || seed.length == 64, "BIP32: seed length must be 16, 32 or 64 bytes");
         bytes memory output = this.sha512(abi.encodePacked(BIP32_DERIVATION_DOMAIN, seed));
@@ -83,7 +81,7 @@ contract BIP32 is ICrypto {
     }
 
     // derive extended child key pair from a parent extended private key
-    function deriveChildKeyPair(ExtendedPrivateKey memory parent, uint32 index) internal view returns (ExtendedPrivateKey memory xPriv, ExtendedPublicKey memory xPub) {
+    function deriveChildKeyPair(ExtendedPrivateKey memory parent, uint32 index) public view returns (ExtendedPrivateKey memory xPriv, ExtendedPublicKey memory xPub) {
         // hardened key derivation if index > 0x80000000
         if (index >= 0x80000000) {
             bytes memory data = abi.encodePacked(hex"00", parent.key, index);
@@ -132,6 +130,7 @@ contract BIP32 is ICrypto {
         // in case the last character of the path is not a ' or /
         if(pathBytes[pathBytes.length - 1] != bytes1('\'')) {
             (xPriv, xPub) = deriveChildKeyPair(data, index);
-        }
+            
+        }    
     }
 }
