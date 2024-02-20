@@ -94,4 +94,24 @@ contract BIP32_Test is Test {
         require(keccak256(childXPub.key) == keccak256(cxPub.key));
     }
 
+    function testDeriveChildPubKeyFromParentPubKeyFail() public view {
+        bytes memory seed = abi.encodePacked(bip32.localRandom());
+
+        // derive the master key directly and when using a seed and a path
+        (BIP32Forge.ExtendedPrivateKey memory xPriv) = bip32.newFromSeed(seed);
+
+        // derive the master public key
+        (BIP32Forge.ExtendedPublicKey memory xPub) = bip32.derivePubKey(xPriv);
+        
+        // derive a child public key from the master public key
+        (BIP32Forge.ExtendedPrivateKey memory cxPriv, BIP32Forge.ExtendedPublicKey memory cxPub) = bip32.deriveChildKeyPair(xPriv, 2147483648);
+        try bip32.derivePubKeyFromParentPubKey(xPub, 2147483648) {
+            revert("Should have failed");
+        } catch Error(string memory reason) {
+            // Pass the test because the function call should fail for hardened derivation from parent pubkey
+            console2.log("Expected error: ", reason);
+        }
+        
+    }
+ 
 }
