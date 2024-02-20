@@ -2,7 +2,7 @@ pragma solidity ^0.8.13;
 
 import {Test, console2} from "forge-std/Test.sol";
 import {BIP32Forge} from "../src/BIP32Forge.sol";
-import {AndromedaForge} from "src/AndromedaForge.sol";
+import {PKE} from "src/crypto/encryption.sol";
 
 contract BIP32_Test is Test {
     BIP32Forge bip32;
@@ -76,6 +76,22 @@ contract BIP32_Test is Test {
         // derive a non hardened child key from a hardened one (mixing both)
         (BIP32Forge.ExtendedPrivateKey memory nhcxPriv, BIP32Forge.ExtendedPublicKey memory nhcxPub) = bip32.deriveChildKeyPair(hcxPriv, 0);
         (BIP32Forge.ExtendedPrivateKey memory pathNHCXPriv, BIP32Forge.ExtendedPublicKey memory pathNHCXPub) = bip32.deriveChildKeyPairFromPath(seed, "m/0'/0");
-        require(nhcxPriv.key == pathNHCXPriv.key);        
+        require(nhcxPriv.key == pathNHCXPriv.key);
     }
+    
+    function testDeriveChildPubKeyFromParentPubKey() public view {
+        bytes memory seed = abi.encodePacked(bip32.localRandom());
+
+        // derive the master key directly and when using a seed and a path
+        (BIP32Forge.ExtendedPrivateKey memory xPriv) = bip32.newFromSeed(seed);
+
+        // derive the master public key
+        (BIP32Forge.ExtendedPublicKey memory xPub) = bip32.derivePubKey(xPriv);
+        
+        // derive a child public key from the master public key
+        (BIP32Forge.ExtendedPrivateKey memory cxPriv, BIP32Forge.ExtendedPublicKey memory cxPub) = bip32.deriveChildKeyPair(xPriv, 0);
+        (BIP32Forge.ExtendedPublicKey memory childXPub) = bip32.derivePubKeyFromParentPubKey(xPub, 0);
+        require(keccak256(childXPub.key) == keccak256(cxPub.key));
+    }
+
 }

@@ -23,21 +23,6 @@ contract BIP32 is ICrypto {
         ExtendedKeyAttributes attributes;
     }
     
-    // The master extended private keys
-    /*ExtendedPrivateKey private xPriv;
-    ExtendedPublicKey public xPub;
-
-    constructor (bytes memory seed) {
-        xPriv = newFromSeed(seed);
-        xPub = ExtendedPublicKey(PKE.derivePubKey(xPriv.key), xPriv.attributes);
-    }
-
-    // get master public key
-    function getMasterPub() external view returns (bytes memory) {
-        return PKE.derivePubKey(xPriv.key);
-    }
-    */
-
     // Derivation domain separator for BIP39 keys array 
     bytes public constant BIP32_DERIVATION_DOMAIN = hex"426974636f696e2073656564";
     
@@ -94,7 +79,7 @@ contract BIP32 is ICrypto {
             xPub = ExtendedPublicKey(PKE.derivePubKey(secret_key), extKeyAttr);
             
         } else {
-            bytes memory data = abi.encodePacked(parent.key, index);
+            bytes memory data = abi.encodePacked(PKE.derivePubKey(parent.key), index);
             bytes memory output = this.sha512(abi.encodePacked(Utils.bytesToHexString(abi.encodePacked(parent.attributes.chainCode, data))));
             (bytes32 secret_key, bytes32 chain_code) = split(output);
             ExtendedKeyAttributes memory extKeyAttr = ExtendedKeyAttributes(parent.attributes.depth + 1, fingerprint(PKE.derivePubKey(parent.key)), index, chain_code);
@@ -138,5 +123,20 @@ contract BIP32 is ICrypto {
         }
         
         (xPriv, xPub) = deriveChildKeyPair(data, index);
+    }
+
+    // derive child public key from a parent public key
+    function derivePubKeyFromParentPubKey(ExtendedPublicKey memory parent, uint32 index) external view returns (ExtendedPublicKey memory xPub) {
+        require(index < 0x80000000, "BIP32: can't derive hardened public keys from a parent public key");
+        bytes memory data = abi.encodePacked(parent.key, index);
+        bytes memory output = this.sha512(abi.encodePacked(Utils.bytesToHexString(abi.encodePacked(parent.attributes.chainCode, data))));
+        (bytes32 secret_key, bytes32 chain_code) = split(output);
+        ExtendedKeyAttributes memory extKeyAttr = ExtendedKeyAttributes(parent.attributes.depth + 1, fingerprint(parent.key), index, chain_code);
+        xPub = ExtendedPublicKey(PKE.derivePubKey(secret_key), extKeyAttr);
+    }
+
+    // derive public key from a given private key
+    function derivePubKey(ExtendedPrivateKey memory xPriv) external view returns (ExtendedPublicKey memory xPub) {
+        return ExtendedPublicKey(PKE.derivePubKey(xPriv.key), xPriv.attributes);
     }
 }
