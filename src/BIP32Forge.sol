@@ -10,28 +10,10 @@ interface Vm {
 }
 
 contract BIP32Forge is ICrypto {
-    struct ExtendedKeyAttributes {
-        // Depth in the key derivation heirarchy
-        uint8 depth;
-        uint32 parentFingerprint;
-        // Index of the key in the parent's children
-        uint32 childNumber;
-        bytes32 chainCode;
-    }
-    struct ExtendedPrivateKey {
-        bytes32 key;
-        ExtendedKeyAttributes attributes;
-    }
-    struct ExtendedPublicKey {
-        bytes key;
-        ExtendedKeyAttributes attributes;
-    }
-    
     Vm constant vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
     // Derivation domain separator for BIP39 keys array 
     bytes public constant BIP32_DERIVATION_DOMAIN = hex"426974636f696e2073656564";
-
 
     function sha512(bytes memory data) external view override returns (bytes memory) {
         require(data.length > 0, "sha512: data length must be greater than 0");
@@ -66,7 +48,7 @@ contract BIP32Forge is ICrypto {
     }
 
     // Based on the context, it generates either the extended private key or extended public key
-    function newFromSeed(bytes memory seed) public view returns (ExtendedPrivateKey memory) {
+    function newFromSeed(bytes memory seed) public view override returns (ExtendedPrivateKey memory) {
         // if seed length is not 16 32 or 64 bytes, throw
         require(seed.length == 16 || seed.length == 32 || seed.length == 64, "BIP32: seed length must be 16, 32 or 64 bytes");
         bytes memory output = this.sha512(abi.encodePacked(Utils.bytesToHexString(abi.encodePacked(BIP32_DERIVATION_DOMAIN, seed))));
@@ -75,7 +57,7 @@ contract BIP32Forge is ICrypto {
     }
 
     // derive extended child key pair from a parent seed
-    function deriveChildKeyPairFromSeed(bytes memory seed, uint32 index) public view returns (ExtendedPrivateKey memory xPriv, ExtendedPublicKey memory xPub) {
+    function deriveChildKeyPairFromSeed(bytes memory seed, uint32 index) external view returns (ExtendedPrivateKey memory xPriv, ExtendedPublicKey memory xPub) {
         ExtendedPrivateKey memory parent = newFromSeed(seed);
         return deriveChildKeyPair(parent, index);
     }
@@ -139,7 +121,7 @@ contract BIP32Forge is ICrypto {
     }
 
     // derive child public key from a parent public key
-    function derivePubKeyFromParentPubKey(ExtendedPublicKey memory parent, uint32 index) public view returns (ExtendedPublicKey memory xPub) {
+    function derivePubKeyFromParentPubKey(ExtendedPublicKey memory parent, uint32 index) external view returns (ExtendedPublicKey memory xPub) {
         require(index < 0x80000000, "BIP32: can't derive hardened public keys from a parent public key");
         bytes memory data = abi.encodePacked(parent.key, index);
         bytes memory output = this.sha512(abi.encodePacked(Utils.bytesToHexString(abi.encodePacked(parent.attributes.chainCode, data))));
@@ -149,7 +131,7 @@ contract BIP32Forge is ICrypto {
     }
 
     // derive public key from a given private key
-    function derivePubKey(ExtendedPrivateKey memory xPriv) public view returns (ExtendedPublicKey memory xPub) {
+    function derivePubKey(ExtendedPrivateKey memory xPriv) external view returns (ExtendedPublicKey memory xPub) {
         return ExtendedPublicKey(PKE.derivePubKey(xPriv.key), xPriv.attributes);
     }
 }

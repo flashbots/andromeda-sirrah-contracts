@@ -109,7 +109,6 @@ contract BIP32_Test is Test {
             revert("Should have failed");
         } catch Error(string memory reason) {
             // Pass the test because the function call should fail for hardened derivation from parent pubkey
-            console2.log("Expected error: ", reason);
         }
         
     }

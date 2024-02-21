@@ -4,14 +4,18 @@ pragma solidity ^0.8.8;
 import {IAndromeda} from "src/IAndromeda.sol";
 import {Secp256k1} from "src/crypto/secp256k1.sol";
 import {PKE, Curve} from "src/crypto/encryption.sol";
+import {ICrypto} from "src/ICrypto.sol";
 
-abstract contract KeyManagerBase {
+abstract contract NewKeyManagerBase {
     // This base class provides the functionality of a singleton
     // Private Key holder. It allows many applications to share the
     // same bootstrapped instance.
 
     // Anyone can see the master public key
     address public xPub;
+
+    // placeholder for hardened and non_hardened child indexes
+    uint32 private _hardenedChildIndexCnt = 2147483648;
 
     // Attestation is now possible using the caller as domain
     // separator
@@ -33,21 +37,15 @@ abstract contract KeyManagerBase {
     // master private key
     function xPriv() internal virtual returns (bytes32);
 
+    function _derivedPriv(address a) internal virtual returns (bytes32);
+
     // Key derivation for encryption
-
-    // Any contract in confidential mode can request a
-    // hardened derived key
-    function _derivedPriv(address a) private returns (bytes32) {
-        return keccak256(abi.encodePacked(a, xPriv()));
-    }
-
-    function derivedPriv() public returns (bytes32) {
-        return _derivedPriv(msg.sender);
-    }
 
     // Because we are using hardened derivation, for each
     // contract we will need someone to sign it off chain
     mapping(address => bytes) public derivedPub;
+
+    mapping(address => uint32) internal childIndex;
 
     function onchain_DeriveKey(
         address a,
@@ -61,6 +59,12 @@ abstract contract KeyManagerBase {
     }
 
     function offchain_DeriveKey(address a) public returns (bytes memory dPub, bytes memory sig) {
+        require(_hardenedChildIndexCnt <= 4294967295, "Can't derive more hardened children for this parent!");
+        // TODO extend this with support for non hardened key derivation
+        if(childIndex[a] == 0) {
+            childIndex[a] = _hardenedChildIndexCnt;
+            _hardenedChildIndexCnt++;
+        }
         bytes32 dPriv = _derivedPriv(a);
         dPub = PKE.derivePubKey(dPriv);
         bytes32 digest = keccak256(abi.encodePacked(a, dPub));
@@ -69,20 +73,41 @@ abstract contract KeyManagerBase {
     }
 }
 
-contract KeyManager_v0 is KeyManagerBase {
+contract NewKeyManager_v0 is NewKeyManagerBase {
     IAndromeda public Suave;
+    ICrypto public bip32;
 
-    constructor(address _Suave) {
+
+    constructor(address _Suave, ICrypto _bip32) {
         Suave = IAndromeda(_Suave);
+        bip32 = _bip32;
     }
+
+
+    // Any contract in confidential mode can request a
+    // hardened derived key
+    function _derivedPriv(address a) internal override returns (bytes32) {
+        uint32 index = childIndex[a];
+        // TODO extend this with support for non hardened key derivation
+        require(index != 0, "No such child index");
+        bytes32 seed = Suave.volatileGet("seed");
+        (ICrypto.ExtendedPrivateKey memory _xPriv, ICrypto.ExtendedPublicKey memory _xPub) = bip32.deriveChildKeyPairFromSeed(abi.encodePacked(seed), index);
+        return _xPriv.key;
+    }
+
+    function derivedPriv() public returns (bytes32) {
+        return _derivedPriv(msg.sender);
+    }
+
 
     // 1. Bootstrap phase
     function offchain_Bootstrap() public returns (address _xPub, bytes memory att) {
         require(xPub == address(0));
-
-        bytes32 xPriv_ = Suave.localRandom();
-        _xPub = Secp256k1.deriveAddress(uint256(xPriv_));
-        Suave.volatileSet("xPriv", xPriv_);
+        bytes32 seed = Suave.localRandom();
+        bytes32 xPrivKey = bip32.newFromSeed(abi.encodePacked(seed)).key;
+        _xPub = Secp256k1.deriveAddress(uint256(xPrivKey));
+        Suave.volatileSet("seed", seed);
+        Suave.volatileSet("xPriv", xPrivKey);
         att = Suave.attestSgx(keccak256(abi.encodePacked("xPub", _xPub)));
     }
 

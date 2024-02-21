@@ -2,14 +2,16 @@
 pragma solidity ^0.8.13;
 
 import {Test, console2} from "forge-std/Test.sol";
-import {KeyManager_v0} from "../src/KeyManager.sol";
+import {NewKeyManager_v0} from "../src/NewKeyManager.sol";
 import {PKE} from "../src/crypto/encryption.sol";
 import {AndromedaForge} from "src/AndromedaForge.sol";
+import {BIP32Forge} from "src/BIP32Forge.sol";
 import "forge-std/Vm.sol";
 
-contract KeyManager_v0_Test is Test {
+contract NewKeyManager_v0_Test is Test {
     AndromedaForge andromeda;
-    KeyManager_v0 keymgr;
+    NewKeyManager_v0 keymgr;
+    BIP32Forge bip32;
 
     Vm.Wallet alice;
     Vm.Wallet bob;
@@ -17,8 +19,9 @@ contract KeyManager_v0_Test is Test {
 
     function setUp() public {
         andromeda = new AndromedaForge();
-        vm.prank(vm.addr(uint(keccak256("KeyManager.t.sol"))));
-        keymgr = new KeyManager_v0(address(andromeda));
+        bip32 = new BIP32Forge();
+        vm.prank(vm.addr(uint(keccak256("NewKeyManager.t.sol"))));
+        keymgr = new NewKeyManager_v0(address(andromeda), bip32);
 
         alice = vm.createWallet("alice");
         bob = vm.createWallet("bob");

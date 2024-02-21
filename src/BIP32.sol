@@ -1,35 +1,18 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.8;
 
-import {ICrypto} from "src/ICrypto.sol";
+import "src/ICrypto.sol";
 import {PKE} from "../src/crypto/encryption.sol";
 import {Utils} from "src/utils/Utils.sol";
 
 contract BIP32 is ICrypto {
-    struct ExtendedKeyAttributes {
-        // Depth in the key derivation heirarchy
-        uint8 depth;
-        uint32 parentFingerprint;
-        // Index of the key in the parent's children
-        uint32 childNumber;
-        bytes32 chainCode;
-    }
-    struct ExtendedPrivateKey {
-        bytes32 key;
-        ExtendedKeyAttributes attributes;
-    }
-    struct ExtendedPublicKey {
-        bytes key;
-        ExtendedKeyAttributes attributes;
-    }
-    
     // Derivation domain separator for BIP39 keys array 
     bytes public constant BIP32_DERIVATION_DOMAIN = hex"426974636f696e2073656564";
     
     // The address of the SHA512 precompile 
     address public constant SHA512_ADDR = 0x0000000000000000000000000000000000050700;
 
-    function sha512(bytes memory data) external view returns (bytes memory) {
+    function sha512(bytes memory data) external view override returns (bytes memory) {
         require(data.length > 0, "sha512: data length must be greater than 0");
         (bool success, bytes memory output) = SHA512_ADDR.staticcall(data);
         require(success);
@@ -53,7 +36,7 @@ contract BIP32 is ICrypto {
     }
 
     // Based on the context, it generates either the extended private key or extended public key
-    function newFromSeed(bytes memory seed) internal view returns (ExtendedPrivateKey memory) {
+    function newFromSeed(bytes memory seed) public view override returns (ExtendedPrivateKey memory) {
         // if seed length is not 16 32 or 64 bytes, throw
         require(seed.length == 16 || seed.length == 32 || seed.length == 64, "BIP32: seed length must be 16, 32 or 64 bytes");
         bytes memory output = this.sha512(abi.encodePacked(Utils.bytesToHexString(abi.encodePacked(BIP32_DERIVATION_DOMAIN, seed))));
@@ -62,7 +45,7 @@ contract BIP32 is ICrypto {
     }
 
     // derive extended child key pair from a parent seed
-    function deriveChildKeyPairFromSeed(bytes memory seed, uint32 index) public view returns (ExtendedPrivateKey memory xPriv, ExtendedPublicKey memory xPub) {
+    function deriveChildKeyPairFromSeed(bytes memory seed, uint32 index) external view override returns (ExtendedPrivateKey memory xPriv, ExtendedPublicKey memory xPub) {
         ExtendedPrivateKey memory parent = newFromSeed(seed);
         return deriveChildKeyPair(parent, index);
     }
@@ -90,7 +73,7 @@ contract BIP32 is ICrypto {
 
 
     // derive child extended key pairs from a given string path
-    function deriveChildKeyPairFromPath(bytes memory seed, string memory path) external view returns (ExtendedPrivateKey memory xPriv, ExtendedPublicKey memory xPub) {
+    function deriveChildKeyPairFromPath(bytes memory seed, string memory path) external view override returns (ExtendedPrivateKey memory xPriv, ExtendedPublicKey memory xPub) {
         bytes memory pathBytes = bytes(path);
         // require that the path is not empty and the first character of the path is "m" or "M"
         require(pathBytes.length > 0 || pathBytes[0] == bytes1('m') || pathBytes[0] == bytes1('M'), "BIP32: invalid path");
@@ -126,7 +109,7 @@ contract BIP32 is ICrypto {
     }
 
     // derive child public key from a parent public key
-    function derivePubKeyFromParentPubKey(ExtendedPublicKey memory parent, uint32 index) external view returns (ExtendedPublicKey memory xPub) {
+    function derivePubKeyFromParentPubKey(ExtendedPublicKey memory parent, uint32 index) external view override returns (ExtendedPublicKey memory xPub) {
         require(index < 0x80000000, "BIP32: can't derive hardened public keys from a parent public key");
         bytes memory data = abi.encodePacked(parent.key, index);
         bytes memory output = this.sha512(abi.encodePacked(Utils.bytesToHexString(abi.encodePacked(parent.attributes.chainCode, data))));
@@ -136,7 +119,7 @@ contract BIP32 is ICrypto {
     }
 
     // derive public key from a given private key
-    function derivePubKey(ExtendedPrivateKey memory xPriv) external view returns (ExtendedPublicKey memory xPub) {
+    function derivePubKey(ExtendedPrivateKey memory xPriv) external view override returns (ExtendedPublicKey memory xPub) {
         return ExtendedPublicKey(PKE.derivePubKey(xPriv.key), xPriv.attributes);
     }
 }
