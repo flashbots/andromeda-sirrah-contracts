@@ -23,12 +23,7 @@ contract TimelockTest is Test {
         andromeda.initialize();
         vm.warp(1701528486);
 
-        andromeda.setMrSigner(
-            bytes32(
-                0x1cf2e52911410fbf3f199056a98d58795a559a2e800933f7fcd13d048462271c
-            ),
-            true
-        );
+        andromeda.setMrSigner(bytes32(0x1cf2e52911410fbf3f199056a98d58795a559a2e800933f7fcd13d048462271c), true);
 
         // To ensure we don't use the same address with volatile storage
         vm.prank(vm.addr(uint256(keccak256("examples/Timelock.t.sol"))));
@@ -45,18 +40,13 @@ contract TimelockTest is Test {
 
         // Initialize the derived public key
         assertEq(timelock.isInitialized(), false);
-        (bytes memory dPub, bytes memory sig) = keymgr.offchain_DeriveKey(
-            address(timelock)
-        );
+        (bytes memory dPub, bytes memory sig) = keymgr.offchain_DeriveKey(address(timelock));
         keymgr.onchain_DeriveKey(address(timelock), dPub, sig);
         assertEq(timelock.isInitialized(), true);
 
         // Submit encrypted orders
         string memory message = "Suave timelock test message!32xr";
-        bytes memory ciph = timelock.encryptMessage(
-            message,
-            bytes32(uint(0xdead2123))
-        );
+        bytes memory ciph = timelock.encryptMessage(message, bytes32(uint256(0xdead2123)));
         timelock.submitEncrypted(ciph);
 
         vm.roll(60);

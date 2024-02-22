@@ -10,6 +10,7 @@ import {Base64} from "solady/src/Milady.sol";
 
 contract FmspcParser {
     IPEMCertChainLib public immutable pemCertLib;
+
     constructor() {
         pemCertLib = new PEMCertChainLib();
     }
@@ -19,13 +20,7 @@ contract FmspcParser {
     }
 
     function extract_fmspc(bytes calldata quote) public returns (bool, string memory) {
-        (
-            bool successful,
-            ,
-            ,
-            ,
-            V3Struct.ECDSAQuoteV3AuthData memory authDataV3
-        ) = V3Parser.parseInput(quote);
+        (bool successful,,,, V3Struct.ECDSAQuoteV3AuthData memory authDataV3) = V3Parser.parseInput(quote);
         if (!successful) {
             return (false, "could not parse quote");
         }
@@ -33,13 +28,8 @@ contract FmspcParser {
         IPEMCertChainLib.ECSha256Certificate[] memory parsedQuoteCerts;
         {
             // 660k gas
-            (
-                bool certParsedSuccessfully,
-                bytes[] memory quoteCerts
-            ) = pemCertLib.splitCertificateChain(
-                    authDataV3.certification.certData,
-                    3
-                );
+            (bool certParsedSuccessfully, bytes[] memory quoteCerts) =
+                pemCertLib.splitCertificateChain(authDataV3.certification.certData, 3);
             if (!certParsedSuccessfully) {
                 return (false, "could not parse cert");
             }
@@ -50,18 +40,14 @@ contract FmspcParser {
                 quoteCerts[i] = Base64.decode(string(quoteCerts[i]));
                 bool isPckCert = i == 0; // additional parsing for PCKCert
                 bool certDecodedSuccessfully;
-                (certDecodedSuccessfully, parsedQuoteCerts[i]) = pemCertLib
-                    .decodeCert(quoteCerts[i], isPckCert);
+                (certDecodedSuccessfully, parsedQuoteCerts[i]) = pemCertLib.decodeCert(quoteCerts[i], isPckCert);
                 if (!certDecodedSuccessfully) {
                     return (false, "could not decode cert");
                 }
             }
         }
 
-        string memory parsedFmspc = parsedQuoteCerts[0]
-            .pck
-            .sgxExtension
-            .fmspc;
+        string memory parsedFmspc = parsedQuoteCerts[0].pck.sgxExtension.fmspc;
         return (true, parsedFmspc);
     }
 }

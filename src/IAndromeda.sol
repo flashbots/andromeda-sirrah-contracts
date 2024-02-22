@@ -11,4 +11,13 @@ interface IAndromeda is IHash {
     function volatileGet(bytes32 tag) external returns (bytes32);
     function localRandom() external view returns (bytes32);
     function sealingKey(bytes32 tag) external view returns (bytes32);
+
+    struct HttpRequest {
+        string url;
+        string method;
+        string[] headers;
+        bytes body;
+        bool withFlashbotsSignature;
+    }
+    function doHTTPRequest(HttpRequest memory request) external view returns (bytes memory);
 }
