@@ -17,6 +17,10 @@ async function deploy() {
   const [Andromeda, andomedaFound] = await deploy_artifact(LocalConfig.ANDROMEDA_ARTIFACT, wallet, SigVerifyLib.target);
 
   if (andomedaFound) { 
+    for (let i = 0; i < LocalConfig.TRUSTED_MRENCLAVES.length; i++) {
+      const tx = await (await Andromeda.setMrEnclave(LocalConfig.TRUSTED_MRENCLAVES[i], true)).wait();
+      console.log("Set mr_enclave "+LocalConfig.TRUSTED_MRENCLAVES[i]+" as trusted in "+tx.hash);
+    }
     console.log("Andromeda already deployed, not configuring it");
   } else {
     const enclaveId = JSON.parse(fs.readFileSync(LocalConfig.QE_IDENTITY_FILE, 'utf8')) as EnclaveIdStruct.EnclaveIdStruct;

@@ -14,15 +14,35 @@ async function deploy() {
   const ADDR_OVERRIDES: {[key: string]: string} = LocalConfig.ADDR_OVERRIDES;
   const KM = await attach_artifact(LocalConfig.KEY_MANAGER_SN_ARTIFACT, wallet, ADDR_OVERRIDES[LocalConfig.KEY_MANAGER_SN_ARTIFACT]);
 
-  const SealedAuction = await deploy_artifact_direct(LocalConfig.SEALED_AUCTION_ARTIFACT, wallet, KM.target, 5);
-  const [Timelock, foundTL] = await deploy_artifact(LocalConfig.TIMELOCK_ARTIFACT, wallet, KM.target);
+  // const SealedAuction = await deploy_artifact_direct(LocalConfig.SEALED_AUCTION_ARTIFACT, wallet, KM.target, 5);
+  // const [Timelock, foundTL] = await deploy_artifact(LocalConfig.TIMELOCK_ARTIFACT, wallet, KM.target);
+
+  const HttpCall = await deploy_artifact_direct(LocalConfig.HTTPCALL_ARTIFACT, wallet, KM.target); 
+
+  // await kettle_advance(kettle);
+
+  // await derive_key(await HttpCall.getAddress(), kettle, KM);
 
   await kettle_advance(kettle);
 
-  await derive_key(await SealedAuction.getAddress(), kettle, KM);
-  if (!foundTL) {
-    await derive_key(await Timelock.getAddress(), kettle, KM);
+  const httpcallData = await HttpCall.makeHttpCall.populateTransaction();
+  console.log(httpcallData);
+  
+  let resp = await kettle_execute(kettle, httpcallData.to, httpcallData.data);
+
+  let executionResult = JSON.parse(resp);
+  if (executionResult.Success === undefined) {
+    throw("execution did not succeed: "+JSON.stringify(resp));
   }
+
+  const offchainFinalizeResult = HttpCall.interface.decodeFunctionResult(HttpCall.makeHttpCall.fragment, executionResult.Success.output.Call);
+
+  console.log(offchainFinalizeResult);
+
+  // await derive_key(await SealedAuction.getAddress(), kettle, KM);
+  // if (!foundTL) {
+  //   await derive_key(await Timelock.getAddress(), kettle, KM);
+  // }
 }
 
 deploy().catch((error) => {

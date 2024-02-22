@@ -63,6 +63,10 @@ contract AndromedaForge is IAndromeda {
         return vm.envOr(env, bytes32(""));
     }
 
+    function httpCall(string memory url) external view override returns (string memory) {
+        return "";
+    }
+
     // Currently active host
     string activeHost = "default";
 

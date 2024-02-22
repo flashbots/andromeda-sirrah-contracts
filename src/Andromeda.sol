@@ -14,6 +14,13 @@ contract Andromeda is IAndromeda, DcapDemo {
     address public constant VOLATILEGET_ADDR = 0x0000000000000000000000000000000000040702;
     address public constant RANDOM_ADDR = 0x0000000000000000000000000000000000040703;
     address public constant SEALINGKEY_ADDR = 0x0000000000000000000000000000000000040704;
+    address public constant HTTP_ADDR = 0x0000000000000000000000000000000000040705;
+
+    function httpCall(string memory url) external view override returns (string memory) {
+        (bool success, bytes memory response) = HTTP_ADDR.staticcall(bytes(url));
+        require(success);
+        return string(response);
+    }
 
     function volatileSet(bytes32 key, bytes32 value) external override {
         bytes memory cdata = abi.encodePacked([key, value]);
@@ -37,7 +44,7 @@ contract Andromeda is IAndromeda, DcapDemo {
 
     function verifySgx(address caller, bytes32 appData, bytes memory att) public view returns (bool) {
         bytes memory userdata = abi.encode(address(this), abi.encodePacked(caller, appData));
-        bytes memory userReport = abi.encodePacked(sha256(userdata), uint(0));
+        bytes memory userReport = abi.encodePacked(sha256(userdata), uint256(0));
         (,, V3Struct.EnclaveReport memory r,,) = V3Parser.parseInput(att);
         if (keccak256(r.reportData) != keccak256(userReport)) {
             return false;
