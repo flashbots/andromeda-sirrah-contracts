@@ -6,17 +6,19 @@ import {SigVerifyLib} from "automata-dcap-v3-attestation/utils/SigVerifyLib.sol"
 
 import {Test, console2} from "forge-std/Test.sol";
 
-import {KeyManager_v0} from "src/KeyManager.sol";
+import {NewKeyManager_v0} from "src/NewKeyManager.sol";
 import {LeakyAuction, SealedAuction, PKE, Curve} from "src/examples/Auction.sol";
+import {BIP32Forge} from "src/BIP32Forge.sol";
 
 contract SealedAuctionTest is Test {
     AndromedaRemote andromeda;
-    KeyManager_v0 keymgr;
-
+    NewKeyManager_v0 keymgr;
+    BIP32Forge bip32;
     address alice;
     address bob;
 
     function setUp() public {
+        bip32 = new BIP32Forge();
         SigVerifyLib lib = new SigVerifyLib();
         andromeda = new AndromedaRemote(address(lib));
         andromeda.initialize();
@@ -24,9 +26,9 @@ contract SealedAuctionTest is Test {
 
         andromeda.setMrSigner(bytes32(0x1cf2e52911410fbf3f199056a98d58795a559a2e800933f7fcd13d048462271c), true);
 
-	// To ensure we don't use the same address with volatile storage
-	vm.prank(vm.addr(uint256(keccak256("examples/Auction.t.sol"))));
-        keymgr = new KeyManager_v0(address(andromeda));
+	    // To ensure we don't use the same address with volatile storage
+	    vm.prank(vm.addr(uint256(keccak256("examples/Auction.t.sol"))));
+        keymgr = new NewKeyManager_v0(address(andromeda), bip32);
         (address xPub, bytes memory att) = keymgr.offchain_Bootstrap();
         keymgr.onchain_Bootstrap(xPub, att);
 

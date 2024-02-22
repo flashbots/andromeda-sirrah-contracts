@@ -1,19 +1,26 @@
 {
   "RPC_URL": "https://rpc.rigil.suave.flashbots.net",
-  "KETTLE_RPC": "http://kettle.sirrah.suave.flashbots.net:5556",
+  "KETTLE_RPC": "http://localhost:5556",
   "PRIVATE_KEY": "",
   "TCB_INFO_FILE": "lib/automata-dcap-v3-attestation/contracts/assets/tcbInfo2.json",
   "QE_IDENTITY_FILE": "lib/automata-dcap-v3-attestation/contracts/assets/identity.json",
+  "BIP32_ARTIFACT": "out/BIP32.sol/BIP32.json",
   "SIGVERIFY_LIB_ARTIFACT": "out/SigVerifyLib.sol/SigVerifyLib.json",
   "ANDROMEDA_ARTIFACT": "out/Andromeda.sol/Andromeda.json",
   "TRUSTED_MRENCLAVES": [
-    "0xa9956056f8f39fffbe148eeb0285be7dc8a9034fd393d5f62a7b058c6ad5e82b"
+    "0x8b0fbfa4aef0c0e78f3257ecb310d813ee4e433948cd7243f3c813f8426e89e9"
   ],
   "TRUSTED_MRSIGNERS": [
-    "0xf0365ce7081fda379914c703fe08648db1cce3747e8c10f74ff742926399f15a"
+    "0xfc6722db8d30a6764744b372b0cd43cdf858af1607714dd8db6b1af9e1202a3e"
   ],
-  "KEY_MANAGER_SN_ARTIFACT": "out/KeyManager.sol/KeyManager_v0.json",
+  "KEY_MANAGER_SN_ARTIFACT": "out/NewKeyManager.sol/NewKeyManager_v0.json",
   "SEALED_AUCTION_ARTIFACT": "out/Auction.sol/SealedAuction.json",
   "TIMELOCK_ARTIFACT": "out/Timelock.sol/Timelock.json",
-  "ADDR_OVERRIDES": {}
+  "ADDR_OVERRIDES": {
+    "out/SigVerifyLib.sol/SigVerifyLib.json": "0x2F63A0d6903A90A886aDcD25B18EDfeA8A9364AF",
+    "out/BIP32.sol/BIP32.json": "0xCf6e0D750B6DeeAbce9D5D5985Bd63d86e00a085",
+    "out/Andromeda.sol/Andromeda.json": "0x8122faCb8b708eCEfd00EF6B7d7b5022C3d6C271",
+    "out/NewKeyManager.sol/NewKeyManager_v0.json": "0xC25936e5C505ffd90036dB35b56B70AFa3DFb52b",
+    "out/Timelock.sol/Timelock.json": "0x899501f4CC40444EB9B8ad3AcA2FecBEdf8FEaa6"
+  }
 }

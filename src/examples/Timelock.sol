@@ -2,12 +2,12 @@ pragma solidity ^0.8.13;
 
 import "../crypto/secp256k1.sol";
 import "../crypto/encryption.sol";
-import "../KeyManager.sol";
+import "../NewKeyManager.sol";
 
 contract Timelock {
-    KeyManager_v0 keymgr;
+    NewKeyManager_v0 keymgr;
 
-    constructor(KeyManager_v0 _keymgr) {
+    constructor(NewKeyManager_v0 _keymgr) {
         keymgr = _keymgr;
     }
 

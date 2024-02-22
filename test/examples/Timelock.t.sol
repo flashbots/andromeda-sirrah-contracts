@@ -6,18 +6,21 @@ import {SigVerifyLib} from "automata-dcap-v3-attestation/utils/SigVerifyLib.sol"
 
 import {Test, console2} from "forge-std/Test.sol";
 import "src/crypto/secp256k1.sol";
-import {KeyManager_v0} from "src/KeyManager.sol";
+import {NewKeyManager_v0} from "src/NewKeyManager.sol";
 import {PKE, Curve} from "src/crypto/encryption.sol";
 import {Timelock} from "src/examples/Timelock.sol";
+import {BIP32Forge} from "src/BIP32Forge.sol";
 
 contract TimelockTest is Test {
     AndromedaRemote andromeda;
-    KeyManager_v0 keymgr;
+    NewKeyManager_v0 keymgr;
+    BIP32Forge bip32;
 
     address alice;
     address bob;
 
     function setUp() public {
+        bip32 = new BIP32Forge();
         SigVerifyLib lib = new SigVerifyLib();
         andromeda = new AndromedaRemote(address(lib));
         andromeda.initialize();
@@ -32,7 +35,7 @@ contract TimelockTest is Test {
 
         // To ensure we don't use the same address with volatile storage
         vm.prank(vm.addr(uint256(keccak256("examples/Timelock.t.sol"))));
-        keymgr = new KeyManager_v0(address(andromeda));
+        keymgr = new NewKeyManager_v0(address(andromeda), bip32);
         (address xPub, bytes memory att) = keymgr.offchain_Bootstrap();
         keymgr.onchain_Bootstrap(xPub, att);
 

@@ -2,7 +2,7 @@ pragma solidity ^0.8.13;
 
 import "../crypto/secp256k1.sol";
 import "../crypto/encryption.sol";
-import "../KeyManager.sol";
+import "../NewKeyManager.sol";
 
 // We'l start with a Leaky second price auction
 contract LeakyAuction {
@@ -57,9 +57,9 @@ contract LeakyAuction {
 
 // Now we'll fix the auction using the TEE coprocessor
 contract SealedAuction is LeakyAuction {
-    KeyManager_v0 keymgr;
+    NewKeyManager_v0 keymgr;
 
-    constructor(KeyManager_v0 _keymgr, uint256 delay_blocks) {
+    constructor(NewKeyManager_v0 _keymgr, uint256 delay_blocks) {
         keymgr = _keymgr;
         auctionEndTime = block.number + delay_blocks;
     }

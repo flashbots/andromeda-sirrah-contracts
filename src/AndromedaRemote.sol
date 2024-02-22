@@ -146,7 +146,7 @@ contract AndromedaRemote is IAndromeda, DcapDemo {
     }
 
     function sha512(bytes memory data) public view returns (bytes memory) {
-        require(data.length > 0, "AndromedaForge: sha512: data length must be greater than 0");
+        require(data.length > 0, "sha512: data length must be greater than 0");
         string[] memory inputs = new string[](3);
         inputs[0] = "sh";
         inputs[1] = "ffi/sha512.sh";

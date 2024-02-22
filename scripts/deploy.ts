@@ -14,6 +14,8 @@ async function deploy() {
   const wallet = new ethers.Wallet(LocalConfig.PRIVATE_KEY, provider);
 
   const [SigVerifyLib,] = await deploy_artifact(LocalConfig.SIGVERIFY_LIB_ARTIFACT, wallet);
+  const [Bip32,] = await deploy_artifact(LocalConfig.BIP32_ARTIFACT, wallet);
+
   const [Andromeda, andomedaFound] = await deploy_artifact(LocalConfig.ANDROMEDA_ARTIFACT, wallet, SigVerifyLib.target);
 
   if (andomedaFound) { 
@@ -34,7 +36,7 @@ async function deploy() {
     }
   }
 
-  const [KeyManagerSN,] = await deploy_artifact(LocalConfig.KEY_MANAGER_SN_ARTIFACT, wallet, Andromeda.target);
+  const [KeyManagerSN,] = await deploy_artifact(LocalConfig.KEY_MANAGER_SN_ARTIFACT, wallet, Andromeda.target, Bip32.target);
 }
 
 deploy().catch((error) => {
