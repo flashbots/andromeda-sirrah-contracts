@@ -5,13 +5,15 @@ import {Test, console2} from "forge-std/Test.sol";
 import {NewKeyManager_v0} from "../src/NewKeyManager.sol";
 import {PKE} from "../src/crypto/encryption.sol";
 import {AndromedaForge} from "src/AndromedaForge.sol";
-import {BIP32Forge} from "src/BIP32Forge.sol";
+import {HashForge} from "src/hash/HashForge.sol";
+import {BIP32} from "src/BIP32.sol";
 import "forge-std/Vm.sol";
 
 contract NewKeyManager_v0_Test is Test {
     AndromedaForge andromeda;
     NewKeyManager_v0 keymgr;
-    BIP32Forge bip32;
+    HashForge hasher;
+    BIP32 bip32;
 
     Vm.Wallet alice;
     Vm.Wallet bob;
@@ -19,7 +21,8 @@ contract NewKeyManager_v0_Test is Test {
 
     function setUp() public {
         andromeda = new AndromedaForge();
-        bip32 = new BIP32Forge();
+        hasher = new HashForge();
+        bip32 = new BIP32(hasher);
         vm.prank(vm.addr(uint(keccak256("NewKeyManager.t.sol"))));
         keymgr = new NewKeyManager_v0(address(andromeda), bip32);
 
@@ -76,14 +79,14 @@ contract NewKeyManager_v0_Test is Test {
         // Do the bootstrap
         (address xPub, bytes memory att) = keymgr.offchain_Bootstrap();
         keymgr.onchain_Bootstrap(xPub, att);
-
+        uint32 index = 2147483648;
         // Show the derived key associated with this contract.
         (bytes memory dPub, bytes memory sig) = keymgr.offchain_DeriveKey(
-            address(this)
+            address(this), index
         );
-        keymgr.onchain_DeriveKey(address(this), dPub, sig);
+        keymgr.onchain_DeriveKey(address(this), dPub, sig, index);
 
-        bytes32 dPriv = keymgr.derivedPriv();
-        assertEq(PKE.derivePubKey(dPriv), keymgr.derivedPub(address(this)));
+        bytes32 dPriv = keymgr.derivedPriv(index);
+        assertEq(PKE.derivePubKey(dPriv), keymgr.derivedPub(address(this), index));
     }
 }
