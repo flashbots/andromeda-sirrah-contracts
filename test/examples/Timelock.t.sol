@@ -9,18 +9,21 @@ import "src/crypto/secp256k1.sol";
 import {NewKeyManager_v0} from "src/NewKeyManager.sol";
 import {PKE, Curve} from "src/crypto/encryption.sol";
 import {Timelock} from "src/examples/Timelock.sol";
-import {BIP32Forge} from "src/BIP32Forge.sol";
+import {BIP32} from "src/BIP32.sol";
+import {HashForge} from "src/hash/HashForge.sol";
 
 contract TimelockTest is Test {
     AndromedaRemote andromeda;
     NewKeyManager_v0 keymgr;
-    BIP32Forge bip32;
+    BIP32 bip32;
+    HashForge hasher;
 
     address alice;
     address bob;
 
     function setUp() public {
-        bip32 = new BIP32Forge();
+        hasher = new HashForge();
+        bip32 = new BIP32(hasher);
         SigVerifyLib lib = new SigVerifyLib();
         andromeda = new AndromedaRemote(address(lib));
         andromeda.initialize();
@@ -48,10 +51,11 @@ contract TimelockTest is Test {
 
         // Initialize the derived public key
         assertEq(timelock.isInitialized(), false);
+        uint32 index = 0;
         (bytes memory dPub, bytes memory sig) = keymgr.offchain_DeriveKey(
-            address(timelock)
+            address(timelock), index
         );
-        keymgr.onchain_DeriveKey(address(timelock), dPub, sig);
+        keymgr.onchain_DeriveKey(address(timelock), dPub, sig, index);
         assertEq(timelock.isInitialized(), true);
 
         // Submit encrypted orders

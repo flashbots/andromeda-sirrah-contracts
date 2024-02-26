@@ -8,17 +8,20 @@ import {Test, console2} from "forge-std/Test.sol";
 
 import {NewKeyManager_v0} from "src/NewKeyManager.sol";
 import {LeakyAuction, SealedAuction, PKE, Curve} from "src/examples/Auction.sol";
-import {BIP32Forge} from "src/BIP32Forge.sol";
+import {BIP32} from "src/BIP32.sol";
+import {HashForge} from "src/hash/HashForge.sol";
 
 contract SealedAuctionTest is Test {
     AndromedaRemote andromeda;
     NewKeyManager_v0 keymgr;
-    BIP32Forge bip32;
+    HashForge hasher;
+    BIP32 bip32;
     address alice;
     address bob;
 
     function setUp() public {
-        bip32 = new BIP32Forge();
+        hasher = new HashForge();
+        bip32 = new BIP32(hasher);
         SigVerifyLib lib = new SigVerifyLib();
         andromeda = new AndromedaRemote(address(lib));
         andromeda.initialize();
@@ -54,8 +57,9 @@ contract SealedAuctionTest is Test {
 
         // Initialize the derived public key
         assertEq(auc.isInitialized(), false);
-        (bytes memory dPub, bytes memory sig) = keymgr.offchain_DeriveKey(address(auc));
-        keymgr.onchain_DeriveKey(address(auc), dPub, sig);
+        uint32 index = 0;
+        (bytes memory dPub, bytes memory sig) = keymgr.offchain_DeriveKey(address(auc), index);
+        keymgr.onchain_DeriveKey(address(auc), dPub, sig, index);
         assertEq(auc.isInitialized(), true);
 
         // Submit encrypted orders

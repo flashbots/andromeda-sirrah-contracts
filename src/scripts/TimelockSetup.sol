@@ -7,6 +7,7 @@ import {AndromedaRemote} from "src/AndromedaRemote.sol";
 import {SigVerifyLib} from "automata-dcap-v3-attestation/utils/SigVerifyLib.sol";
 import {NewKeyManager_v0} from "src/NewKeyManager.sol";
 import {BIP32} from "src/BIP32.sol";
+import {HashPrecompile} from "src/hash/HashPrecompile.sol";
 
 contract TimelockSetup is Script {
     function run() public {
@@ -27,7 +28,8 @@ contract TimelockSetup2 is Script {
         console2.log("Running TimelockSetup2");
         // To ensure we don't use the same address with volatile storage
         // vm.prank(vm.addr(uint256(keccak256("examples/Timelock.t.sol"))));
-        BIP32 bip32 = new BIP32();
+        HashPrecompile hasher = new HashPrecompile();
+        BIP32 bip32 = new BIP32(hasher);
         NewKeyManager_v0 keymgr = new NewKeyManager_v0(
             address(vm.envAddress("andromeda")),
             bip32

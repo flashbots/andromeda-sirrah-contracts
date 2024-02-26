@@ -3,7 +3,7 @@ pragma solidity ^0.8.8;
 
 import {IHash} from "src/hash/IHash.sol";
 
-contract HashForge is IHash {
+contract HashPrecompile is IHash {
     // The address of the SHA512 precompile 
     address public constant SHA512_ADDR = 0x0000000000000000000000000000000000050700;
 

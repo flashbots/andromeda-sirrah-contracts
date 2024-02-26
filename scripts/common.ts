@@ -44,8 +44,8 @@ export async function deploy_artifact(path: string, signer: ethers.Signer, ...ar
 }
 
 /* Contract utils */
-export async function derive_key(address: string, kettle: net.Socket | string, KM: ethers.Contract) {
-  const offchainDeriveTxData = await KM.offchain_DeriveKey.populateTransaction(address);
+export async function derive_key(address: string, kettle: net.Socket | string, KM: ethers.Contract, index: number = 0) {
+  const offchainDeriveTxData = await KM.offchain_DeriveKey.populateTransaction(address, index);
   let resp = await kettle_execute(kettle, offchainDeriveTxData.to, offchainDeriveTxData.data);
 
   let executionResult = JSON.parse(resp);
@@ -54,7 +54,7 @@ export async function derive_key(address: string, kettle: net.Socket | string, K
   }
 
   const offchainDeriveResult = KM.interface.decodeFunctionResult(KM.offchain_DeriveKey.fragment, executionResult.Success.output.Call).toObject();
-  const onchainDeriveTx = await (await KM.onchain_DeriveKey(address, offchainDeriveResult.dPub, offchainDeriveResult.sig)).wait();
+  const onchainDeriveTx = await (await KM.onchain_DeriveKey(address, offchainDeriveResult.dPub, offchainDeriveResult.sig, index)).wait();
 
   console.log("submitted derive key for "+address+" in "+onchainDeriveTx.hash);  
 }
