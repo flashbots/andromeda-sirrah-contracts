@@ -4,11 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build timelock && vite build confstore",
+    "timelock": "vite timelock",
+    "confstore": "vite confstore",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
-    "preview": "vite preview"
+    "format": "prettier --write \"**/*.{ts,tsx}\""
   },
   "dependencies": {
     "@metamask/sdk-react": "^0.14.2",

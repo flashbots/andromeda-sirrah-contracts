@@ -43,6 +43,25 @@ function verifySgx(address caller, bytes32 appData, bytes memory att) external v
 
 This produces evidence that the `appData` was requested by the `caller`. The verification routine is pure Solidity, and does not require any special precompiles.
 
+- *External services*
+
+Currently there are two external services defined: redis (persistent) key-value store and redis pubsub:
+```solidity
+interface Redis {
+    function set(string memory key, bytes memory value) external;
+    function get(string memory key) external returns (bytes memory);
+}
+interface RedisPubsub {
+    function publish(string memory topic, bytes memory msg) external;
+    function get_message(string memory topic) external returns (bytes memory);
+    function subscribe(string memory topic) external;
+    function unsubscribe(string memory topic) external;
+}
+```
+
+For interacting with external services see [lib/revm-services/Interfaces.sol](lib/revm-services/Interfaces.sol) and the [RedisConfidentialStore example contract](src/examples/RedisConfidentialStore.sol).
+
+
 ## Implementations
 We provide three implementations of the Andromeda interface:
 
@@ -70,14 +89,22 @@ This is still a simplified strawman example, as it does not support upgrading th
 
 ## Timelock encryption demo
 
-As a final demo, we include a sample application in the form of a timelock decryption service.
+As one demo, we include a sample application in the form of a timelock decryption service.
 The code is at [./src/examples/Timelock.sol:Timelock](./src/examples/Timelock.sol)
 and the smart contract is found on the Rigil test network [https://explorer.rigil.suave.flashbots.net/address/0x6858162E579DFC66a623AE1bA357d67BF026dDD6](https://explorer.rigil.suave.flashbots.net/address/0x6858162E579DFC66a623AE1bA357d67BF026dDD6).
 
 The application is very simple: messages are encrypted to the public key of the contract. A TEE kettle can only decrypt them only after the light client reports that a deadline has passed on the blockchain. 
 
-The frontend is hosted at http://timelock.sirrah.suave.flashbots.net:5173/
+The frontend is hosted at https://timelock.sirrah.suave.flashbots.net/  
 You'll need to point your web3 browser extension like Metamask to [point to a Rigil endpoint](https://github.com/flashbots/suave-specs/tree/main/specs/rigil). If you don't have Rigil testnet coins you can get some at [faucet.rigil.suave.flashbots.net](https://faucet.rigil.suave.flashbots.net).
+
+## Confidential bundle store demo
+
+In another demo, [RedisConfidentialStore](./src/examples/RedisConfidentialStore.sol), we show how we can use redis's key-value store and pubsub to implement a replicated bundle database which preserves integrity and confidentiality.  
+This specific demo aims to bring us closer to feature parity with Rigil by implementing the [confidential data store](https://suave.flashbots.net/technical/specs/rigil/confidential-data-store).  
+
+This demo is also very simple, and allows inserting bundles, indexing them (by the block they target), and fetching them. The demo is built in a way that also allows replicating bundles across multiple kettles (as long as they are onboarded to the same key manager - not shown on the demo).  
+The RedisConfidentialStore contract is deployed to the Rigil testnet, and can be found at [https://explorer.rigil.suave.flashbots.net/address/0xF1b9942f1DBf1dD9538FC2ee8e2FC533b7070366](https://explorer.rigil.suave.flashbots.net/address/0xF1b9942f1DBf1dD9538FC2ee8e2FC533b7070366).
 
 ## Usage
 
@@ -96,18 +123,11 @@ For ease of use we provide the following `make` targets:
 
 Deployed contracts are kept track of in the [deployment.json](deployment.json) file. If you want to re-deploy a contract, simply remove it from the `ADDR_OVERRIDES` section. The various deployment scripts write to the file on successful deployments.
 
-## Rigil predeployed contracts
+## Rigil
 
 If you want to build and deploy only some of the contracts, here are ones predeployed to Rigil.
 
-1. Libraries
-
-In [foundry.toml] add the following line at the end of the file:
-```
-libraries = ["src/crypto/encryption.sol:SimpleEncryption:0x10296A369d68a5DCafa30fDc9a99Af3154eF3D87", "src/crypto/encryption.sol:PKE:0xD31973ab1FEf7F0010ffae5c812A88B9a046279b", "src/crypto/secp256k1.sol:Secp256k1:0x4537Ed80812cd0740170baE40BaeC0E9F1fEeB53"]
-```
-
-2. Contracts
+1. Contracts
 
 In [deployment.json] change the `ADDR_OVERRIDES` to include:
 
@@ -118,19 +138,24 @@ In [deployment.json] change the `ADDR_OVERRIDES` to include:
   }
 ```
 
-3. Demo apps
+2. Demo apps
 
 If you want to use predeployed `Timelock` demo, one is available on Rigil. Include the following in the `ADDR_OVERRIDES`:
 
 ```
   "ADDR_OVERRIDES": {
-    "out/Timelock.sol/Timelock.json": "0x6858162E579DFC66a623AE1bA357d67BF026dDD6"
+    "out/Timelock.sol/Timelock.json": "0x6858162E579DFC66a623AE1bA357d67BF026dDD6",
+    "out/RedisConfidentialStore.sol/BundleConfidentialStore.json": "0xF1b9942f1DBf1dD9538FC2ee8e2FC533b7070366"
   }
 ```
 
 > [!WARNING]
 > The addresses will change, so don't depend on them too much. This is intended for quick prototyping rather than something that is highly available.
 
+
+### Rigil kettle
+
+If you don't want to run a kettle yourself, you can always connect to the development TEE kettle at https://kettle.sirrah.suave.flashbots.net.
 
 ## License
 
