@@ -2,30 +2,29 @@ pragma solidity ^0.8.13;
 
 import {Test, console2} from "forge-std/Test.sol";
 import {BIP32} from "../src/BIP32.sol";
-import {HashForge} from "src/hash/HashForge.sol";
+import {AndromedaForge} from "src/AndromedaForge.sol";
+
 
 contract BIP32_Test is Test {
     BIP32 bip32;
-    HashForge hasher;
+    AndromedaForge andromeda;
     
     function setUp() public {
-        hasher = new HashForge();
-        bip32 = new BIP32(hasher);
+        andromeda = new AndromedaForge();
+        bip32 = new BIP32(andromeda);
     }
 
     function testSHA512() public view {
         bytes memory data = "test";
-        bytes memory result = hasher.sha512(abi.encodePacked(data));
+        bytes memory result = andromeda.sha512(abi.encodePacked(data));
         bytes memory expected = bytes(hex"ee26b0dd4af7e749aa1a8ee3c10ae9923f618980772e473f8819a5d4940e0db27ac185f8a0e1d5f84f88bc887fd67b143732c304cc5fa9ad8e6f57f50028a8ff");
-        //print the result to the console
         require(keccak256(result) == keccak256(expected)); 
     }
     
     function testSplitFunction() public view {
-        bytes memory data = hasher.sha512("test");
-        (bytes32 left, bytes32 right) = bip32.split(data);   
-        bytes32 expected_left  = 0xee26b0dd4af7e749aa1a8ee3c10ae9923f618980772e473f8819a5d4940e0db2;
-        bytes32 expected_right = 0x7ac185f8a0e1d5f84f88bc887fd67b143732c304cc5fa9ad8e6f57f50028a8ff;   
+        (bytes32 left, bytes32 right) = bip32.split(bytes(hex"70fc1da84876732b9ab9db31d877059091ec094613681db29aaa78fa6b03af93b71a989780bde3370eb595f505d58d0a0059186a336c40b8581da2df2193592c"));   
+        bytes32 expected_left  = 0x70fc1da84876732b9ab9db31d877059091ec094613681db29aaa78fa6b03af93;
+        bytes32 expected_right = 0xb71a989780bde3370eb595f505d58d0a0059186a336c40b8581da2df2193592c;
         require(left == expected_left);
         require(right == expected_right);
     }

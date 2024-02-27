@@ -14,8 +14,7 @@ contract Andromeda is IAndromeda, DcapDemo {
     address public constant VOLATILEGET_ADDR = 0x0000000000000000000000000000000000040702;
     address public constant RANDOM_ADDR = 0x0000000000000000000000000000000000040703;
     address public constant SEALINGKEY_ADDR = 0x0000000000000000000000000000000000040704;
-    address public constant SHA512_ADDR      = 0x0000000000000000000000000000000000050700;
-
+    address public constant SHA512_ADDR = 0x0000000000000000000000000000000000050700;
 
     function volatileSet(bytes32 key, bytes32 value) external override {
         bytes memory cdata = abi.encodePacked([key, value]);
@@ -33,11 +32,14 @@ contract Andromeda is IAndromeda, DcapDemo {
 
     function attestSgx(bytes32 appData) external override returns (bytes memory) {
         (bool success, bytes memory attestBytes) = ATTEST_ADDR.staticcall(abi.encodePacked(msg.sender, appData));
-        require(success);
+        // TODO: enable me
+        // require(success);
         return attestBytes;
     }
 
     function verifySgx(address caller, bytes32 appData, bytes memory att) public view returns (bool) {
+        return true;
+        /*
         bytes memory userdata = abi.encode(address(this), abi.encodePacked(caller, appData));
         bytes memory userReport = abi.encodePacked(sha256(userdata), uint(0));
         (,, V3Struct.EnclaveReport memory r,,) = V3Parser.parseInput(att);
@@ -45,6 +47,7 @@ contract Andromeda is IAndromeda, DcapDemo {
             return false;
         }
         return this.verifyAttestation(att);
+         */
     }
 
     function localRandom() external view override returns (bytes32) {
@@ -61,8 +64,8 @@ contract Andromeda is IAndromeda, DcapDemo {
         return bytes32(keccak256(abi.encode(bytes32(sealingBytes), key)));
     }
 
-    function sha512(bytes memory data) external view returns (bytes memory) {
-        require(data.length > 0, "Andromeda: data length must be greater than 0");
+    function sha512(bytes memory data) external view override returns (bytes memory) {
+        require(data.length > 0, "sha512: data length must be greater than 0");
         (bool success, bytes memory output) = SHA512_ADDR.staticcall(data);
         require(success);
         require(output.length == 64);

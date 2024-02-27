@@ -6,8 +6,10 @@ import {PKE} from "../src/crypto/encryption.sol";
 import {Utils} from "src/utils/Utils.sol";
 
 contract BIP32 {
-    // Derivation domain separator for BIP39 keys array 
-    bytes public constant BIP32_DERIVATION_DOMAIN = hex"426974636f696e2073656564";
+    // Derivation domain separator for BIP39 keys array (Suave seed)
+    bytes public constant BIP32_DERIVATION_DOMAIN = hex"416E64726F6D6564612073656564";
+    // Hardened key indexes start from 0x80000000 (2³¹) and above
+    uint32 public constant HARDENED_START_INDEX = 0x80000000;
 
     struct ExtendedKeyAttributes {
         // Index of the key in the parent's children
@@ -30,7 +32,9 @@ contract BIP32 {
     }
 
     function split(bytes memory data) public pure returns(bytes32 key, bytes32 chain_code) {
+        require(data.length == 64, "BIP32: data length must be 64 bytes");
         assembly {
+        // this starts with 32 index because the first 32 bytes are the length of the bytes array    
         key := mload(add(data, 32)) // Load first 32 bytes
         chain_code := mload(add(data, 64)) // Load second 32 bytes
         }

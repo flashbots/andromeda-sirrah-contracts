@@ -1,5 +1,5 @@
 .PHONY: build-debug
-build:
+build-debug:
 	forge build --revert-strings debug
 
 .PHONY: build

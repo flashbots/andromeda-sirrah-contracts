@@ -1,23 +1,25 @@
-# Timelock demo WebApp
+# Andromeda Sirrah Demos
 
 This directory contains a demo webapp for the [Timelock contract](../src/examples/Timelock.sol).  
 You can see the live demo at `http://timelock.sirrah.suave.flashbots.net:5173`.  
 
-## Building and running the Timelock webapp
+## Building and running the demos
 
-1. Make sure you have `bun` installed (`npm i --global bun`) and run `bun install` instead of the usual `npm install`
+1. Make sure you have `bun` installed (`npm i --global bun`)
 2. Run `npm install` in the parent directory
-3. Build the webapp with `bun vite build` (alternatively `npm run build`)
-4. Run the webapp with `bun vite` (alternatively `npm run dev`)
+3. Run `bun install` instead of the usual `npm install` in the demos directory
+4. Build the demo with `bun vite build <demo>` (`bun run build`)
+5. Run the demo with `bun vite <demo>` (`bun run timelock` or `bun run confstore`)
 
 Running the Timelock demo webapp requires that you have the Timelock contract address configured in the [../deployment.json](../deployment.json) file like so:
 ```
   "ADDR_OVERRIDES": {
-    "out/Timelock.sol/Timelock.json": "0x6858162E579DFC66a623AE1bA357d67BF026dDD6"
+    "out/Timelock.sol/Timelock.json": "0x6858162E579DFC66a623AE1bA357d67BF026dDD6",
+    "out/RedisConfidentialStore.sol/BundleConfidentialStore.json": "0xF1b9942f1DBf1dD9538FC2ee8e2FC533b7070366"
   }
 ```
 
-If you want to build and deploy the Timelock contract from scratch, see the parent [../README.md](../README.md).  
+If you want to build and deploy the demo contracts from scratch, see the parent [../README.md](../README.md).  
 
 ## Signing chain transactions
 

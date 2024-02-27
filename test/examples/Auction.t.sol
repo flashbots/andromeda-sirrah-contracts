@@ -6,22 +6,17 @@ import {SigVerifyLib} from "automata-dcap-v3-attestation/utils/SigVerifyLib.sol"
 
 import {Test, console2} from "forge-std/Test.sol";
 
-import {NewKeyManager_v0} from "src/NewKeyManager.sol";
+import {KeyManager_v0} from "src/KeyManager.sol";
 import {LeakyAuction, SealedAuction, PKE, Curve} from "src/examples/Auction.sol";
-import {BIP32} from "src/BIP32.sol";
-import {HashForge} from "src/hash/HashForge.sol";
 
 contract SealedAuctionTest is Test {
     AndromedaRemote andromeda;
-    NewKeyManager_v0 keymgr;
-    HashForge hasher;
-    BIP32 bip32;
+    KeyManager_v0 keymgr;
+
     address alice;
     address bob;
 
     function setUp() public {
-        hasher = new HashForge();
-        bip32 = new BIP32(hasher);
         SigVerifyLib lib = new SigVerifyLib();
         andromeda = new AndromedaRemote(address(lib));
         andromeda.initialize();
@@ -29,9 +24,9 @@ contract SealedAuctionTest is Test {
 
         andromeda.setMrSigner(bytes32(0x1cf2e52911410fbf3f199056a98d58795a559a2e800933f7fcd13d048462271c), true);
 
-	    // To ensure we don't use the same address with volatile storage
-	    vm.prank(vm.addr(uint256(keccak256("examples/Auction.t.sol"))));
-        keymgr = new NewKeyManager_v0(address(andromeda), bip32);
+        // To ensure we don't use the same address with volatile storage
+        vm.prank(vm.addr(uint256(keccak256("examples/Auction.t.sol"))));
+        keymgr = new KeyManager_v0(address(andromeda));
         (address xPub, bytes memory att) = keymgr.offchain_Bootstrap();
         keymgr.onchain_Bootstrap(xPub, att);
 
@@ -57,9 +52,8 @@ contract SealedAuctionTest is Test {
 
         // Initialize the derived public key
         assertEq(auc.isInitialized(), false);
-        uint32 index = 0;
-        (bytes memory dPub, bytes memory sig) = keymgr.offchain_DeriveKey(address(auc), index);
-        keymgr.onchain_DeriveKey(address(auc), dPub, sig, index);
+        (bytes memory dPub, bytes memory sig) = keymgr.offchain_DeriveKey(address(auc));
+        keymgr.onchain_DeriveKey(address(auc), dPub, sig);
         assertEq(auc.isInitialized(), true);
 
         // Submit encrypted orders

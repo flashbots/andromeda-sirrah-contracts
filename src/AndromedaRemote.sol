@@ -145,15 +145,6 @@ contract AndromedaRemote is IAndromeda, DcapDemo {
         return vm.envOr(env, bytes32(""));
     }
 
-    function sha512(bytes memory data) public view returns (bytes memory) {
-        require(data.length > 0, "sha512: data length must be greater than 0");
-        string[] memory inputs = new string[](3);
-        inputs[0] = "sh";
-        inputs[1] = "ffi/sha512.sh";
-        inputs[2] = string(data);
-        return vm.ffi(inputs);
-    }
-
     // Currently active host
     string activeHost = "default";
 
@@ -170,6 +161,15 @@ contract AndromedaRemote is IAndromeda, DcapDemo {
         }
         return string(converted);
         //return string(abi.encodePacked("0x", converted));
+    }
+
+    function sha512(bytes memory data) external view override returns (bytes memory) {
+        require(data.length > 0, "sha512: data length must be greater than 0");
+        string[] memory inputs = new string[](3);
+        inputs[0] = "sh";
+        inputs[1] = "ffi/sha512.sh";
+        inputs[2] = string(data);
+        return vm.ffi(inputs);
     }
 
     ///////////////////////////////////////////////////////

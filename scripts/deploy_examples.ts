@@ -15,13 +15,19 @@ async function deploy() {
   const KM = await attach_artifact(LocalConfig.KEY_MANAGER_SN_ARTIFACT, wallet, ADDR_OVERRIDES[LocalConfig.KEY_MANAGER_SN_ARTIFACT]);
 
   const SealedAuction = await deploy_artifact_direct(LocalConfig.SEALED_AUCTION_ARTIFACT, wallet, KM.target, 5);
-  const [Timelock, foundTL] = await deploy_artifact(LocalConfig.TIMELOCK_ARTIFACT, wallet, KM.target);
-
   await kettle_advance(kettle);
-
   await derive_key(await SealedAuction.getAddress(), kettle, KM);
+
+  const [Timelock, foundTL] = await deploy_artifact(LocalConfig.TIMELOCK_ARTIFACT, wallet, KM.target);
   if (!foundTL) {
+    await kettle_advance(kettle);
     await derive_key(await Timelock.getAddress(), kettle, KM);
+  }
+
+  const [BundleStore, foundBS] = await deploy_artifact(LocalConfig.BUNDLE_STORE_ARTIFACT, wallet, KM.target, []);
+  if (!foundBS) {
+    await kettle_advance(kettle);
+    await derive_key(await BundleStore.getAddress(), kettle, KM);
   }
 }
 
