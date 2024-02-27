@@ -9,10 +9,7 @@ contract BIP32 {
     // Derivation domain separator for BIP39 keys array 
     bytes public constant BIP32_DERIVATION_DOMAIN = hex"426974636f696e2073656564";
 
-        struct ExtendedKeyAttributes {
-        // Depth in the key derivation heirarchy
-        uint8 depth;
-        uint32 parentFingerprint;
+    struct ExtendedKeyAttributes {
         // Index of the key in the parent's children
         uint32 childNumber;
         bytes32 chainCode;
@@ -39,21 +36,13 @@ contract BIP32 {
         }
     }
 
-
-    // This will be applied on the parent public key when generating the child pub/priv key
-    function fingerprint(bytes memory key) internal pure returns (uint32) {
-        bytes32 digest = ripemd160(abi.encodePacked(keccak256(abi.encodePacked(key))));
-        // return the first 4 bytes of the digest as a uint32
-        return uint32(uint256(digest) >> 224);
-    }
-
     // Based on the context, it generates either the extended private key or extended public key
     function newFromSeed(bytes memory seed) public view returns (ExtendedPrivateKey memory) {
         // if seed length is not 16 32 or 64 bytes, throw
         require(seed.length == 16 || seed.length == 32 || seed.length == 64, "BIP32: seed length must be 16, 32 or 64 bytes");
         bytes memory output = hasher.sha512(abi.encodePacked(Utils.bytesToHexString(abi.encodePacked(BIP32_DERIVATION_DOMAIN, seed))));
         (bytes32 secret_key, bytes32 chain_code) = split(output);
-        return ExtendedPrivateKey(secret_key, ExtendedKeyAttributes(0, 0, 0, chain_code));
+        return ExtendedPrivateKey(secret_key, ExtendedKeyAttributes(0, chain_code));
     }
 
     // derive extended child key pair from a parent seed
@@ -69,14 +58,14 @@ contract BIP32 {
             bytes memory data = abi.encodePacked(hex"00", parent.key, index);
             bytes memory output = hasher.sha512(abi.encodePacked(Utils.bytesToHexString(abi.encodePacked(parent.attributes.chainCode, data))));
             (bytes32 secret_key, bytes32 chain_code) = split(output);
-            ExtendedKeyAttributes memory extKeyAttr = ExtendedKeyAttributes(parent.attributes.depth + 1, fingerprint(abi.encodePacked(parent.key)), index, chain_code);
+            ExtendedKeyAttributes memory extKeyAttr = ExtendedKeyAttributes(index, chain_code);
             xPriv =  ExtendedPrivateKey(secret_key, extKeyAttr);
             xPub = ExtendedPublicKey(PKE.derivePubKey(secret_key), extKeyAttr);  
         } else {
             bytes memory data = abi.encodePacked(PKE.derivePubKey(parent.key), index);
             bytes memory output = hasher.sha512(abi.encodePacked(Utils.bytesToHexString(abi.encodePacked(parent.attributes.chainCode, data))));
             (bytes32 secret_key, bytes32 chain_code) = split(output);
-            ExtendedKeyAttributes memory extKeyAttr = ExtendedKeyAttributes(parent.attributes.depth + 1, fingerprint(PKE.derivePubKey(parent.key)), index, chain_code);
+            ExtendedKeyAttributes memory extKeyAttr = ExtendedKeyAttributes(index, chain_code);
             xPriv =  ExtendedPrivateKey(secret_key, extKeyAttr);
             xPub = ExtendedPublicKey(PKE.derivePubKey(secret_key), extKeyAttr);
         }
@@ -121,7 +110,7 @@ contract BIP32 {
         bytes memory data = abi.encodePacked(parent.key, index);
         bytes memory output = hasher.sha512(abi.encodePacked(Utils.bytesToHexString(abi.encodePacked(parent.attributes.chainCode, data))));
         (bytes32 secret_key, bytes32 chain_code) = split(output);
-        ExtendedKeyAttributes memory extKeyAttr = ExtendedKeyAttributes(parent.attributes.depth + 1, fingerprint(parent.key), index, chain_code);
+        ExtendedKeyAttributes memory extKeyAttr = ExtendedKeyAttributes(index, chain_code);
         xPub = ExtendedPublicKey(PKE.derivePubKey(secret_key), extKeyAttr);
     }
 

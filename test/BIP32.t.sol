@@ -106,7 +106,7 @@ contract BIP32_Test is Test {
         (BIP32.ExtendedPrivateKey memory cxPriv, BIP32.ExtendedPublicKey memory cxPub) = bip32.deriveChildKeyPair(xPriv, 2147483648);
         try bip32.derivePubKeyFromParentPubKey(xPub, 2147483648) {
             revert("Should have failed");
-        } catch Error(string memory reason) {
+        } catch Error(string memory) {
             // Pass the test because the function call should fail for hardened derivation from parent pubkey
         }   
     }

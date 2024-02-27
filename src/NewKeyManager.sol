@@ -94,10 +94,10 @@ contract NewKeyManager_v0 is NewKeyManagerBase {
     // Any contract in confidential mode can request a
     // hardened derived key
     function _derivedPriv(address a, uint32 index) internal override returns (bytes32) {
-        bytes32 seed = Suave.volatileGet("seed");
+        bytes32 _seed = Suave.volatileGet("seed");
         // derive the key pair of the address first
         uint32 addrIndex = uint32(uint256(keccak256(abi.encodePacked(a)))) | HARDENED_START_INDEX;
-        (BIP32.ExtendedPrivateKey memory _xPriv, BIP32.ExtendedPublicKey memory _xPub) = bip32.deriveChildKeyPairFromSeed(abi.encodePacked(seed), addrIndex);
+        (BIP32.ExtendedPrivateKey memory _xPriv, BIP32.ExtendedPublicKey memory _xPub) = bip32.deriveChildKeyPairFromSeed(abi.encodePacked(_seed), addrIndex);
         // if an index is provided, derive the child key pair of the given address at that index
         if(index >= HARDENED_START_INDEX) {
             (BIP32.ExtendedPrivateKey memory _cxPriv, BIP32.ExtendedPublicKey memory _cxPub) = bip32.deriveChildKeyPair(_xPriv, index);
@@ -120,10 +120,10 @@ contract NewKeyManager_v0 is NewKeyManagerBase {
     // 1. Bootstrap phase
     function offchain_Bootstrap() public returns (address _xPub, bytes memory att) {
         require(xPub == address(0));
-        bytes32 seed = Suave.localRandom();
-        bytes32 xPrivKey = bip32.newFromSeed(abi.encodePacked(seed)).key;
+        bytes32 _seed = Suave.localRandom();
+        bytes32 xPrivKey = bip32.newFromSeed(abi.encodePacked(_seed)).key;
         _xPub = Secp256k1.deriveAddress(uint256(xPrivKey));
-        Suave.volatileSet("seed", seed);
+        Suave.volatileSet("seed", _seed);
         att = Suave.attestSgx(keccak256(abi.encodePacked("xPub", _xPub)));
     }
 
@@ -178,9 +178,9 @@ contract NewKeyManager_v0 is NewKeyManagerBase {
 
     function finish_Onboard(bytes memory ciphertext) public {
         bytes32 myPriv = Suave.sealingKey("myPriv");
-        bytes32 seed = abi.decode(PKE.decrypt(myPriv, ciphertext), (bytes32));
-        bytes32 xPriv_ = bip32.newFromSeed(abi.encodePacked(seed)).key;
-        require(Secp256k1.deriveAddress(uint256(xPriv_)) == xPub);
-        Suave.volatileSet("seed", seed);
+        bytes32 _seed = abi.decode(PKE.decrypt(myPriv, ciphertext), (bytes32));
+        bytes32 _xPriv = bip32.newFromSeed(abi.encodePacked(_seed)).key;
+        require(Secp256k1.deriveAddress(uint256(_xPriv)) == xPub);
+        Suave.volatileSet("seed", _seed);
     }
 }
