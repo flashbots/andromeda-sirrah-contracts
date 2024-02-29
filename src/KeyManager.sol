@@ -27,6 +27,12 @@ abstract contract KeyManagerBase {
         return Secp256k1.verify(xPub, digest, sig);
     }
 
+    function wrapAddressIndex(address a, uint32 index) public pure returns (bytes24) {
+        bytes20 addrBytes = bytes20(a);
+        bytes4 indexBytes = bytes4(index);
+        return bytes24(abi.encodePacked(addrBytes, indexBytes));
+    }
+
     //////////////////////////////////
     // To be implemented by subclasses
     //////////////////////////////////
@@ -35,13 +41,15 @@ abstract contract KeyManagerBase {
     // master private key
     function xPriv() internal virtual returns (bytes32);
 
-    function _derivedPriv(address a) internal virtual returns (bytes32);
+    function _derivedPriv(address a, uint32 index) internal virtual returns (bytes32);
+
 
     // Key derivation for encryption
 
     // Because we are using hardened derivation, for each
     // contract we will need someone to sign it off chain
-    mapping(address => bytes) public derivedPub;
+    mapping(bytes24 => bytes) public _derivedPub;
+
 
     function onchain_DeriveKey(
         address a,
@@ -49,16 +57,35 @@ abstract contract KeyManagerBase {
         // Signature from a valid kettle
         bytes memory sig
     ) public {
-        bytes32 digest = keccak256(abi.encodePacked(a, dPub));
+        bytes32 digest = keccak256(abi.encodePacked(a, uint32(0), dPub));
         require(Secp256k1.verify(xPub, digest, sig));
-        derivedPub[a] = dPub;
+        bytes24 key = wrapAddressIndex(a, 0);
+        _derivedPub[key] = dPub;
+    }
+
+    function onchain_DeriveKeyWithIndex(
+        address a,
+        uint32 index,
+        bytes memory dPub,
+        // Signature from a valid kettle
+        bytes memory sig
+    ) public {
+        bytes32 digest = keccak256(abi.encodePacked(a, index, dPub));
+        require(Secp256k1.verify(xPub, digest, sig));
+        bytes24 key = wrapAddressIndex(a, index);
+        _derivedPub[key] = dPub;
     }
 
     function offchain_DeriveKey(address a) public returns (bytes memory dPub, bytes memory sig) {
         // TODO followup: disover an API to allow key derivation with an index/path for hardened and non-hardened key derivations
-        bytes32 dPriv = _derivedPriv(a);
+        return offchain_DeriveKeyWithIndex(a, 0);
+    }
+
+    function offchain_DeriveKeyWithIndex(address a, uint32 index) public returns (bytes memory dPub, bytes memory sig) {
+        // TODO followup: disover an API to allow key derivation with an index/path for hardened and non-hardened key derivations
+        bytes32 dPriv = _derivedPriv(a, index);
         dPub = PKE.derivePubKey(dPriv);
-        bytes32 digest = keccak256(abi.encodePacked(a, dPub));
+        bytes32 digest = keccak256(abi.encodePacked(a, index, dPub));
         sig = Secp256k1.sign(uint256(xPriv()), digest);
         require(Secp256k1.verify(xPub, digest, sig));
     }
@@ -79,15 +106,36 @@ contract KeyManager_v0 is KeyManagerBase {
 
     // Any contract in confidential mode can request a
     // hardened derived key
-    function _derivedPriv(address a) internal override returns (bytes32) {
+    function _derivedPriv(address a, uint32 index) internal override returns (bytes32) {
+        // we allow the 0 only for the first hardened key derivation from the address
+        require(index >= bip32.HARDENED_START_INDEX() || index == 0, "Only hardened key derivations are allowed");
         bytes32 seed = getSeed();
+        // we harden the first key derivation (depth 1) per default
         uint32 addrIndex = addressToBIP32HardenedIndex(a);
         (BIP32.ExtendedPrivateKey memory _xPriv, BIP32.ExtendedPublicKey memory _xPub) = bip32.deriveChildKeyPairFromSeed(abi.encodePacked(seed), addrIndex);
+        (BIP32.ExtendedPrivateKey memory _cxPriv, BIP32.ExtendedPublicKey memory _cxPub) = bip32.deriveChildKeyPair(_xPriv, index);
+
         return _xPriv.key;
+    }
+    
+    function derivedPriv(uint32 index) public returns (bytes32) {
+        return _derivedPriv(msg.sender, index);
     }
 
     function derivedPriv() public returns (bytes32) {
-        return _derivedPriv(msg.sender);
+        // we pass 0 to return the first hardened key derivation from the address directly
+        return _derivedPriv(msg.sender, 0);
+    }
+
+    function derivedPubWithIndex(address a, uint32 index) public view returns (bytes memory) {
+        require(index >= bip32.HARDENED_START_INDEX() || index == 0, "Only hardened key derivations are allowed");
+        bytes24 key = wrapAddressIndex(a, index);
+        return _derivedPub[key];
+    }
+
+    // this function is to retrieve the first hardened key derivation from the address
+    function derivedPub(address a) public view returns (bytes memory) {
+        return derivedPubWithIndex(a, 0);
     }
 
     function getSeed() private returns (bytes32) {
