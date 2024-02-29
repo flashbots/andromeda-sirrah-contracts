@@ -14,6 +14,7 @@ async function main() {
 
   /* Assumes andromeda is configured, might not be */
   const Andromeda = await attach_artifact(LocalConfig.ANDROMEDA_ARTIFACT, wallet, LocalConfig.ADDR_OVERRIDES[LocalConfig.ANDROMEDA_ARTIFACT]);
+
   const [KM, _] = await deploy_artifact(LocalConfig.KEY_MANAGER_SN_ARTIFACT, wallet, Andromeda.target);
 
   let resp = await kettle_advance(new_kettle_socket);
