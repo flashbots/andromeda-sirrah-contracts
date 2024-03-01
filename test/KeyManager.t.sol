@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {Test, console2} from "forge-std/Test.sol";
-import {KeyManager_v0} from "../src/KeyManager.sol";
+import {KeyManager_v0, TestRecoverableKeyManagerWrapper} from "../src/KeyManager.sol";
 import {PKE} from "../src/crypto/encryption.sol";
 import {AndromedaForge} from "src/AndromedaForge.sol";
 import "forge-std/Vm.sol";
@@ -10,6 +10,7 @@ import "forge-std/Vm.sol";
 contract KeyManager_v0_Test is Test {
     AndromedaForge andromeda;
     KeyManager_v0 keymgr;
+    TestRecoverableKeyManagerWrapper rckeymgr;
 
     Vm.Wallet alice;
     Vm.Wallet bob;
@@ -19,6 +20,7 @@ contract KeyManager_v0_Test is Test {
         andromeda = new AndromedaForge();
         vm.prank(vm.addr(uint(keccak256("KeyManager.t.sol"))));
         keymgr = new KeyManager_v0(address(andromeda));
+        rckeymgr = new TestRecoverableKeyManagerWrapper(address(andromeda));
 
         alice = vm.createWallet("alice");
         bob = vm.createWallet("bob");
@@ -82,5 +84,34 @@ contract KeyManager_v0_Test is Test {
 
         bytes32 dPriv = keymgr.derivedPriv();
         assertEq(PKE.derivePubKey(dPriv), keymgr.derivedPub(address(this)));
+    }
+
+    function testSeedRecovery() public {
+        andromeda.switchHost("carol");
+        // Do the bootstrap
+        (address xPub, bytes memory att) = rckeymgr.offchain_Bootstrap();
+        rckeymgr.onchain_Bootstrap(xPub, att);
+
+        // do the registration
+        (address my_kettle, bytes memory myPub, bytes memory myAtt) = rckeymgr
+            .offchain_Register();
+        rckeymgr.onchain_Register(my_kettle, myPub, myAtt);
+
+        // do the onboarding
+        bytes memory ciphertext = rckeymgr.offchain_Onboard(my_kettle);
+        rckeymgr.onchain_Onboard(my_kettle, ciphertext);
+
+        // get the seed
+        bytes32 seed = rckeymgr.getCurrentSeed();
+
+        // simulate a new kettle restart by setting the seed to 0
+        rckeymgr.restartKettle();
+        bytes32 resettedSeed = rckeymgr.getCurrentSeed();
+        assertEq(resettedSeed, bytes32(0));
+
+        // recover the seed
+        bytes32 recoveredSeed = rckeymgr.getRecoveredSeed();
+
+        assertEq(seed, recoveredSeed);
     }
 }
