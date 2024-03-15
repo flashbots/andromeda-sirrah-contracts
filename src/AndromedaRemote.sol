@@ -139,7 +139,7 @@ contract AndromedaRemote is IAndromeda, DcapDemo {
         return vm.envOr(env, bytes32(""));
     }
 
-    function doHTTPRequest(IAndromeda.HttpRequest memory request) public returns (bytes memory) {
+    function doHTTPRequest(IAndromeda.HttpRequest memory) external pure returns (bytes memory) {
         return bytes("");
     }
 

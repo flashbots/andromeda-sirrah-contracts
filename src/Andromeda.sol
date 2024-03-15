@@ -73,7 +73,7 @@ contract Andromeda is IAndromeda, DcapDemo {
         return output;
     }
 
-    function doHTTPRequest(IAndromeda.HttpRequest memory request) public returns (bytes memory) {
+    function doHTTPRequest(IAndromeda.HttpRequest memory request) external returns (bytes memory) {
         (bool success, bytes memory data) = DO_HTTP_REQUEST.call(abi.encode(request));
         require(success);
         return abi.decode(data, (bytes));

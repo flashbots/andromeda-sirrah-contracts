@@ -19,5 +19,5 @@ interface IAndromeda is IHash {
         bytes body;
         bool withFlashbotsSignature;
     }
-    function doHTTPRequest(HttpRequest memory request) external view returns (bytes memory);
+    function doHTTPRequest(HttpRequest memory request) external returns (bytes memory);
 }

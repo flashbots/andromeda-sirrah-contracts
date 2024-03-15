@@ -89,7 +89,7 @@ contract AndromedaForge is IAndromeda {
         return vm.ffi(inputs);
     }
 
-    function doHTTPRequest(IAndromeda.HttpRequest memory request) public returns (bytes memory) {
+    function doHTTPRequest(IAndromeda.HttpRequest memory) external pure returns (bytes memory) {
         return bytes("");
     }
 }

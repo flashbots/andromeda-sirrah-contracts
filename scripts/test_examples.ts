@@ -8,10 +8,9 @@ import * as LocalConfig from '../deployment.json'
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function testHC(Timelock: ethers.Contract, kettle: net.Socket | string) {
+async function testHC(HttpCall: ethers.Contract, kettle: net.Socket | string) {
   console.log("Testing httpcall contract...");
   const httpcallData = await HttpCall.makeHttpCall.populateTransaction();
-  console.log(httpcallData);
 
   let resp = await kettle_execute(kettle, httpcallData.to, httpcallData.data);
 
@@ -84,15 +83,14 @@ async function deploy() {
   const ADDR_OVERRIDES: {[key: string]: string} = LocalConfig.ADDR_OVERRIDES;
   const KM = await attach_artifact(LocalConfig.KEY_MANAGER_SN_ARTIFACT, wallet, ADDR_OVERRIDES[LocalConfig.KEY_MANAGER_SN_ARTIFACT]);
 
-  const [HttpCall, foundHC] = await deploy_artifact(LocalConfig.HTTPCALL_ARTIFACT, wallet, KM.target);
-  if (!foundHC) {
-    await derive_key(await HttpCall.getAddress(), kettle, KM);
-  }
+  const [HttpCall, _] = await deploy_artifact(LocalConfig.HTTPCALL_ARTIFACT, wallet);
+  await kettle_advance(kettle);
+
   await testHC(HttpCall, kettle);
 
   const [Timelock, foundTL] = await deploy_artifact(LocalConfig.TIMELOCK_ARTIFACT, wallet, KM.target);
+  await kettle_advance(kettle);
   if (!foundTL) {
-    await kettle_advance(kettle);
     await derive_key(await Timelock.getAddress(), kettle, KM);
   }
   await testTL(Timelock, kettle);
