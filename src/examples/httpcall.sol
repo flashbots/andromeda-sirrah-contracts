@@ -6,7 +6,7 @@ import "../KeyManager.sol";
 
 contract HTTP {
     KeyManager_v0 keymgr;
-    address public constant HTTP_ADDR = 0x0000000000000000000000000000000000040705;
+    address public constant DO_HTTP_REQUEST = 0x0000000000000000000000000000000043200002;
 
 
     constructor(KeyManager_v0 _keymgr) {
@@ -23,13 +23,24 @@ contract HTTP {
     }
 
     function makeHttpCall() public view returns (string memory) {
-        return httpCall("https://scholar.google.com");
+        HttpRequest memory request;
+        request.url = "https://scholar.google.com";
+        request.method = "GET";
+        return doHTTPRequest(req);
     }
 
-    function httpCall(string memory url) internal view returns (string memory) {
-        (bool success, bytes memory response) = HTTP_ADDR.staticcall(bytes(url));
+    // from suave-std
+    struct HttpRequest {
+        string url;
+        string method;
+        string[] headers;
+        bytes body;
+        bool withFlashbotsSignature;
+    }
+
+    function doHTTPRequest(HttpRequest memory request) public returns (bytes memory) {
+        (bool success, bytes memory data) = DO_HTTP_REQUEST.call(abi.encode(request));
         require(success);
-        // return response;
-        return string(response);
+        return abi.decode(data, (bytes));
     }
 }

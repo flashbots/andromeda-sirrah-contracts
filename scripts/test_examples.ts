@@ -8,6 +8,22 @@ import * as LocalConfig from '../deployment.json'
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+async function testHC(Timelock: ethers.Contract, kettle: net.Socket | string) {
+  console.log("Testing httpcall contract...");
+  const httpcallData = await HttpCall.makeHttpCall.populateTransaction();
+  console.log(httpcallData);
+
+  let resp = await kettle_execute(kettle, httpcallData.to, httpcallData.data);
+
+  let executionResult = JSON.parse(resp);
+  if (executionResult.Success === undefined) {
+    throw("execution did not succeed: "+JSON.stringify(resp));
+  }
+
+  const callResult = HttpCall.interface.decodeFunctionResult(HttpCall.makeHttpCall.fragment, executionResult.Success.output.Call);
+  console.log("Response from http call:", callResult);
+}
+
 async function testSA(SealedAuction: ethers.Contract, kettle: net.Socket | string) {
   console.log("Testing sealed auction contract...");
 
@@ -68,11 +84,11 @@ async function deploy() {
   const ADDR_OVERRIDES: {[key: string]: string} = LocalConfig.ADDR_OVERRIDES;
   const KM = await attach_artifact(LocalConfig.KEY_MANAGER_SN_ARTIFACT, wallet, ADDR_OVERRIDES[LocalConfig.KEY_MANAGER_SN_ARTIFACT]);
 
-  const SealedAuction = await deploy_artifact_direct(LocalConfig.SEALED_AUCTION_ARTIFACT, wallet, KM.target, 5);
-  await kettle_advance(kettle);
-
-  await derive_key(await SealedAuction.getAddress(), kettle, KM);
-  await testSA(SealedAuction, kettle);
+  const [HttpCall, foundHC] = await deploy_artifact(LocalConfig.HTTPCALL_ARTIFACT, wallet, KM.target);
+  if (!foundHC) {
+    await derive_key(await HttpCall.getAddress(), kettle, KM);
+  }
+  await testHC(HttpCall, kettle);
 
   const [Timelock, foundTL] = await deploy_artifact(LocalConfig.TIMELOCK_ARTIFACT, wallet, KM.target);
   if (!foundTL) {
@@ -80,6 +96,12 @@ async function deploy() {
     await derive_key(await Timelock.getAddress(), kettle, KM);
   }
   await testTL(Timelock, kettle);
+
+  const SealedAuction = await deploy_artifact_direct(LocalConfig.SEALED_AUCTION_ARTIFACT, wallet, KM.target, 5);
+  await kettle_advance(kettle);
+
+  await derive_key(await SealedAuction.getAddress(), kettle, KM);
+  await testSA(SealedAuction, kettle);
 }
 
 deploy().catch((error) => {
