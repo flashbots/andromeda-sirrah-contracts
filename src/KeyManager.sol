@@ -144,11 +144,10 @@ contract KeyManager_v0 is KeyManagerBase {
     mapping(address => bytes) public ciphertexts;
 
     function offchain_Register() public returns (address addr, bytes memory myPub, bytes memory att) {
-        require(keccak256(registry[addr]) == keccak256(bytes("")));
-
         bytes32 myPriv = Suave.sealingKey("myPriv");
         myPub = PKE.derivePubKey(myPriv);
         addr = address(Secp256k1.deriveAddress(uint256(myPriv)));
+        require(keccak256(registry[addr]) == keccak256(bytes("")));
         att = Suave.attestSgx(keccak256(abi.encodePacked("myPub", myPub, addr)));
         return (addr, myPub, att);
     }
