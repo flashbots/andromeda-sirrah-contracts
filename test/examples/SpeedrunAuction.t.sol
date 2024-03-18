@@ -32,7 +32,7 @@ contract SpeedrunAuction is Test {
     }
 
     function test_sealed() public {
-        vm.prank(address(vm.addr(uint256(keccak256("SpeedrunAuction.t.sol")))));
+        vm.prank(address(vm.addr(uint(keccak256("SpeedrunAuction.t.sol")))));
         SealedAuction auc = new SealedAuction(andromeda);
 
         // Have a Kettle initialize the key
