@@ -18,6 +18,10 @@ format:
 deploy: build
 	npx ts-node -T scripts/deploy.ts
 
+.PHONY: verify-contracts
+verify-contracts: build deploy
+	npx ts-node -T scripts/verify_contracts.ts
+
 .PHONY: bootstrap
 bootstrap: build
 	npx ts-node -T scripts/bootstrap_kettle.ts

@@ -92,6 +92,7 @@ async function deploy() {
   await kettle_advance(kettle);
   if (!foundTL) {
     await derive_key(await Timelock.getAddress(), kettle, KM);
+    await kettle_advance(kettle);
   }
   await testTL(Timelock, kettle);
 

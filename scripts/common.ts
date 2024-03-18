@@ -31,10 +31,14 @@ export async function deploy_artifact(path: string, signer: ethers.Signer, ...ar
   }
   const contract = await deploy_artifact_direct(path, signer, ...args);
 
+  let CONSTRUCTOR_ARGS: {[key: string]: any} = LocalConfig.CONSTRUCTOR_ARGS;
+  CONSTRUCTOR_ARGS[path] = args;
+
   ADDR_OVERRIDES[path] = contract.target;
   let updatedConfig = {
     ...LocalConfig,
     ADDR_OVERRIDES,
+    CONSTRUCTOR_ARGS,
   };
   delete updatedConfig.default;
 
