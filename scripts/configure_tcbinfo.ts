@@ -3,7 +3,7 @@ import { ethers, JsonRpcProvider } from "ethers";
 
 import { TCBInfoStruct } from "lib/automata-dcap-v3-attestation/typechain-types/contracts/AutomataDcapV3Attestation";
 
-import { attach_artifact } from "./common.ts"
+import { artifact_addr, attach_artifact } from "./common.ts"
 
 import * as LocalConfig from '../deployment.json'
 
@@ -17,7 +17,7 @@ async function main() {
   const provider = new JsonRpcProvider(LocalConfig.RPC_URL);
   const wallet = new ethers.Wallet(LocalConfig.PRIVATE_KEY, provider);
 
-  const Andromeda = await attach_artifact(LocalConfig.ANDROMEDA_ARTIFACT, wallet, LocalConfig.ADDR_OVERRIDES[LocalConfig.ANDROMEDA_ARTIFACT]);
+  const Andromeda = await attach_artifact(LocalConfig.ANDROMEDA_ARTIFACT, wallet, artifact_addr(LocalConfig.ANDROMEDA_ARTIFACT));
 
   for (const tcbInfoFile in tcbInfoFiles) {
     const tcbInfo = JSON.parse(fs.readFileSync(tcbInfoFiles[tcbInfoFile], 'utf8')) as TCBInfoStruct.TCBInfoStruct.tcbInfo;

@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 
 import { getContract } from "viem";
-import * as LocalConfig from "../../deployment.json";
 
 import { format_explorer_link } from "./ConsoleLog";
 
@@ -56,7 +55,6 @@ export function ConnectContract(
       return;
     }
     // Create contract instance
-    const ADDR_OVERRIDES: { [key: string]: any } = LocalConfig.ADDR_OVERRIDES;
     const contractInstance = getContract({
       address: addr,
       abi: contract.abi,

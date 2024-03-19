@@ -19,8 +19,5 @@
   "SEALED_AUCTION_ARTIFACT": "out/Auction.sol/SealedAuction.json",
   "TIMELOCK_ARTIFACT": "out/Timelock.sol/Timelock.json",
   "BUNDLE_STORE_ARTIFACT": "out/RedisConfidentialStore.sol/BundleConfidentialStore.json",
-  "ADDR_OVERRIDES": {
-  },
-  "CONSTRUCTOR_ARGS": {
-  }
+  "ARTIFACTS": {}
 }

@@ -13,9 +13,15 @@ You can see the live demo at `http://timelock.sirrah.suave.flashbots.net:5173`.
 
 Running the Timelock demo webapp requires that you have the Timelock contract address configured in the [../deployment.json](../deployment.json) file like so:
 ```
-  "ADDR_OVERRIDES": {
-    "out/Timelock.sol/Timelock.json": "0x6858162E579DFC66a623AE1bA357d67BF026dDD6",
-    "out/RedisConfidentialStore.sol/BundleConfidentialStore.json": "0xF1b9942f1DBf1dD9538FC2ee8e2FC533b7070366"
+  "ARTIFACTS": {
+    "out/Timelock.sol/Timelock.json": {
+      "address": "0x6858162E579DFC66a623AE1bA357d67BF026dDD6",
+      "constructor_args": []
+    },
+    "out/RedisConfidentialStore.sol/BundleConfidentialStore.json": {
+      "address": "0xF1b9942f1DBf1dD9538FC2ee8e2FC533b7070366",
+      "constructor_args": []
+    }
   }
 ```
 

@@ -7,6 +7,27 @@ import * as LocalConfig from '../deployment.json';
 
 /* Utility functions */
 
+export function artifacts(path: string): {[key: string]: {[key: string]: {"address": string, "constructor_args": any[]}}} {
+  let ARTIFACTS: {[key: string]: {[key: string]: {"address": string, "constructor_args": any[]}}} = LocalConfig.ARTIFACTS;
+  return ARTIFACTS;
+}
+
+export function artifact_addr(path: string): string|null {
+  let ARTIFACTS: {[key: string]: {[key: string]: {"address": string, "constructor_args": any[]}}} = LocalConfig.ARTIFACTS;
+  if (path in ARTIFACTS) {
+    return ARTIFACTS[path]["address"];
+  }
+  return null
+}
+
+export function artifact_constructor_args(path: string): any[] {
+  let ARTIFACTS: {[key: string]: {[key: string]: {"address": string, "constructor_args": any[]}}} = LocalConfig.ARTIFACTS;
+  if (path in ARTIFACTS) {
+    return ARTIFACTS[path]["constructor_args"];
+  }
+  return null
+}
+
 export function attach_artifact(path: string, signer: ethers.Signer, address: string): ethers.Contract {
   const factory = ethers.ContractFactory.fromSolidity(fs.readFileSync(path, "utf-8"), signer);
   return factory.attach(address);
@@ -21,9 +42,10 @@ export async function deploy_artifact_direct(path: string, signer: ethers.Signer
 }
 
 export async function deploy_artifact(path: string, signer: ethers.Signer, ...args: any[]): Promise<[ethers.Contract, boolean]> {
-  let ADDR_OVERRIDES: {[key: string]: any} = LocalConfig.ADDR_OVERRIDES;
-  if (path in LocalConfig.ADDR_OVERRIDES) {
-    const addr = ADDR_OVERRIDES[path];
+  let ARTIFACTS: {[key: string]: {[key: string]: {"address": string, "constructor_args": any[]}}} = LocalConfig.ARTIFACTS;
+  if (path in ARTIFACTS) {
+    const addr = ARTIFACTS[path]["address"];
+    // TODO: we could force redeployment if constructor args changed
     console.log("found address "+addr+" for "+path+", attaching it instead of deploying a new one");
     return new Promise((resolve) => {
       resolve([attach_artifact(path, signer, addr), true]);
@@ -31,14 +53,13 @@ export async function deploy_artifact(path: string, signer: ethers.Signer, ...ar
   }
   const contract = await deploy_artifact_direct(path, signer, ...args);
 
-  let CONSTRUCTOR_ARGS: {[key: string]: any} = LocalConfig.CONSTRUCTOR_ARGS;
-  CONSTRUCTOR_ARGS[path] = args;
-
-  ADDR_OVERRIDES[path] = contract.target;
+  ARTIFACTS[path] = {
+    "address": contract.target,
+    "constructor_args": args,
+  }
   let updatedConfig = {
     ...LocalConfig,
-    ADDR_OVERRIDES,
-    CONSTRUCTOR_ARGS,
+    ARTIFACTS,
   };
   delete updatedConfig.default;
 
