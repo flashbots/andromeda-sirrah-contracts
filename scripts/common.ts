@@ -7,23 +7,15 @@ import * as LocalConfig from '../deployment.json';
 
 /* Utility functions */
 
-export function artifacts(path: string): {[key: string]: {[key: string]: {"address": string, "constructor_args": any[]}}} {
+export function artifacts(): {[key: string]: {[key: string]: {"address": string, "constructor_args": any[]}}} {
   let ARTIFACTS: {[key: string]: {[key: string]: {"address": string, "constructor_args": any[]}}} = LocalConfig.ARTIFACTS;
   return ARTIFACTS;
 }
 
 export function artifact_addr(path: string): string|null {
-  let ARTIFACTS: {[key: string]: {[key: string]: {"address": string, "constructor_args": any[]}}} = LocalConfig.ARTIFACTS;
-  if (path in ARTIFACTS) {
-    return ARTIFACTS[path]["address"];
-  }
-  return null
-}
-
-export function artifact_constructor_args(path: string): any[] {
-  let ARTIFACTS: {[key: string]: {[key: string]: {"address": string, "constructor_args": any[]}}} = LocalConfig.ARTIFACTS;
-  if (path in ARTIFACTS) {
-    return ARTIFACTS[path]["constructor_args"];
+  let all_artifacts = artifacts();
+  if (path in all_artifacts) {
+    return all_artifacts[path]["address"];
   }
   return null
 }
