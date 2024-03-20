@@ -34,7 +34,7 @@ export async function deploy_artifact_direct(path: string, signer: ethers.Signer
 }
 
 export async function deploy_artifact(path: string, signer: ethers.Signer, ...args: any[]): Promise<[ethers.Contract, boolean]> {
-  let ARTIFACTS: {[key: string]: {[key: string]: {"address": string, "constructor_args": any[]}}} = LocalConfig.ARTIFACTS;
+  let ARTIFACTS = artifacts();
   if (path in ARTIFACTS) {
     const addr = ARTIFACTS[path]["address"];
     // TODO: we could force redeployment if constructor args changed
