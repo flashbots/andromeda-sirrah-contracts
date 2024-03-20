@@ -2,7 +2,7 @@ import net from "net";
 
 import { ethers, JsonRpcProvider } from "ethers";
 
-import { connect_kettle, deploy_artifact, deploy_artifact_direct, attach_artifact, kettle_advance, kettle_execute, derive_key } from "./common"
+import { artifact_addr, connect_kettle, deploy_artifact, deploy_artifact_direct, attach_artifact, kettle_advance, kettle_execute, derive_key } from "./common"
 
 import * as LocalConfig from '../deployment.json'
 
@@ -11,8 +11,7 @@ async function deploy() {
 
   const provider = new JsonRpcProvider(LocalConfig.RPC_URL);
   const wallet = new ethers.Wallet(LocalConfig.PRIVATE_KEY, provider);
-  const ADDR_OVERRIDES: {[key: string]: string} = LocalConfig.ADDR_OVERRIDES;
-  const KM = await attach_artifact(LocalConfig.KEY_MANAGER_SN_ARTIFACT, wallet, ADDR_OVERRIDES[LocalConfig.KEY_MANAGER_SN_ARTIFACT]);
+  const KM = await attach_artifact(LocalConfig.KEY_MANAGER_SN_ARTIFACT, wallet, artifact_addr(LocalConfig.KEY_MANAGER_SN_ARTIFACT));
 
   const [HttpCall, _] = await deploy_artifact(LocalConfig.HTTPCALL_ARTIFACT, wallet);
   const [BundleStore, foundBS] = await deploy_artifact(LocalConfig.BUNDLE_STORE_ARTIFACT, wallet, KM.target, []);

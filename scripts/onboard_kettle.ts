@@ -2,7 +2,7 @@ import net from "net";
 
 import { ethers, JsonRpcProvider } from "ethers";
 
-import { attach_artifact, deploy_artifact, kettle_execute, kettle_advance} from "./common.ts"
+import { artifact_addr, attach_artifact, deploy_artifact, kettle_execute, kettle_advance} from "./common.ts"
 
 import * as LocalConfig from '../deployment.json'
 
@@ -13,7 +13,7 @@ async function main() {
   const wallet = new ethers.Wallet(LocalConfig.PRIVATE_KEY, provider);
 
   /* Assumes andromeda is configured, might not be */
-  const Andromeda = await attach_artifact(LocalConfig.ANDROMEDA_ARTIFACT, wallet, LocalConfig.ADDR_OVERRIDES[LocalConfig.ANDROMEDA_ARTIFACT]);
+  const Andromeda = await attach_artifact(LocalConfig.ANDROMEDA_ARTIFACT, wallet, artifact_addr(LocalConfig.ANDROMEDA_ARTIFACT));
 
   const [KM, _] = await deploy_artifact(LocalConfig.KEY_MANAGER_SN_ARTIFACT, wallet, Andromeda.target);
 

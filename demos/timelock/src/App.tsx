@@ -17,7 +17,7 @@ import {
   http,
 } from "viem";
 import * as LocalConfig from "../../../deployment.json";
-import { kettle_advance, kettle_execute } from "../../../scripts/common.ts";
+import { artifact_addr, kettle_advance, kettle_execute } from "../../../scripts/common.ts";
 import Timelock from "../../../out/Timelock.sol/Timelock.json";
 
 import { Provider } from "../../common/Suave";
@@ -36,7 +36,7 @@ function TimelockContract(suaveProvider, suaveWallet, updateConsoleLog) {
     suaveProvider,
     suaveWallet,
     Timelock,
-    LocalConfig.ADDR_OVERRIDES[LocalConfig.TIMELOCK_ARTIFACT],
+    artifact_addr(LocalConfig.TIMELOCK_ARTIFACT),
     updateConsoleLog,
   );
 }

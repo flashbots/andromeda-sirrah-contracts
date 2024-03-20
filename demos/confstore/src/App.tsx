@@ -17,7 +17,7 @@ import {
   http,
 } from "viem";
 import * as LocalConfig from "../../../deployment.json";
-import { kettle_advance, kettle_execute } from "../../../scripts/common.ts";
+import { artifact_addr, kettle_advance, kettle_execute } from "../../../scripts/common.ts";
 import StoreContract from "../../../out/RedisConfidentialStore.sol/BundleConfidentialStore.json";
 
 import { Provider } from "../../common/Suave";
@@ -36,7 +36,7 @@ function ConnectStoreContract(suaveProvider, suaveWallet, updateConsoleLog) {
     suaveProvider,
     suaveWallet,
     StoreContract,
-    LocalConfig.ADDR_OVERRIDES[LocalConfig.BUNDLE_STORE_ARTIFACT],
+    artifact_addr(LocalConfig.BUNDLE_STORE_ARTIFACT),
     updateConsoleLog,
   );
 }
