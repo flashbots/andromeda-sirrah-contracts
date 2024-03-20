@@ -24,11 +24,10 @@ contract Andromeda is IAndromeda, DcapDemo {
         require(success);
     }
 
-    function volatileGet(bytes32 key) external override returns (bytes32) {
+    function volatileGet(bytes32 key) public view returns (bytes memory) {
         (bool success, bytes memory value) = VOLATILEGET_ADDR.staticcall(abi.encodePacked((key)));
         require(success);
-        require(value.length == 32);
-        return abi.decode(value, (bytes32));
+        return abi.decode(value, (bytes));
     }
 
     function attestSgx(bytes32 appData) external override returns (bytes memory) {

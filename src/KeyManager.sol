@@ -91,12 +91,13 @@ contract KeyManager_v0 is KeyManagerBase {
     }
 
     function getSeed() internal returns (bytes32) {
-        bytes32 seed = Suave.volatileGet("seed");
+        bytes memory seed = Suave.volatileGet("seed");
         // check if a seed was lost due a kettle restart and restore it
-        if(seed == bytes32(0)) {
-            seed = recoverSeed();
+        if(seed.length > 0) {
+            require(seed.length == 32, "Seed length is not 32 bytes");
+            return bytes32(seed);
         }
-        return seed;
+        return recoverSeed();
     }
 
     function recoverSeed() internal returns (bytes32) {
@@ -189,11 +190,11 @@ contract TestRecoverableKeyManagerWrapper is KeyManager_v0 {
     constructor(address _Suave) KeyManager_v0(_Suave) {}
 
     function getRecoveredSeed() public returns (bytes32) {
-        return super.getSeed();
+        return super.recoverSeed();
     }
 
     function getCurrentSeed() public returns (bytes32) {
-        return Suave.volatileGet("seed");
+        return bytes32(Suave.volatileGet("seed"));
     }
 
     function restartKettle() public {

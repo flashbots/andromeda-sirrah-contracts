@@ -66,7 +66,10 @@ contract KeyManager {
 
     // Private key will only be accessible in confidential mode
     function xPriv() internal returns (bytes32) {
-        return Suave.volatileGet("xPriv");
+        bytes memory _xPriv = Suave.volatileGet("xPriv");
+        require(_xPriv.length == 32, "Seed length is not 32 bytes");
+        return bytes32(_xPriv);
+        
     }
 
     // To initialize the key, some kettle must call this...
