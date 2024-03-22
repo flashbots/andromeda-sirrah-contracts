@@ -44,18 +44,18 @@ contract AndromedaForgeTest is Test {
         bytes32 value = keccak256(abi.encodePacked("hi"));
 
         // Initially it is 0
-        bytes32 value2 = andromeda.volatileGet(bytes32("test"));
+        bytes32 value2 = bytes32(andromeda.volatileGet(bytes32("test")));
         assertEq(value2, "");
 
         // After setting it is hash("hi")
         andromeda.volatileSet(bytes32("test"), value);
-        bytes32 value3 = andromeda.volatileGet(bytes32("test"));
+        bytes32 value3 = bytes32(andromeda.volatileGet(bytes32("test")));
         assertEq(value3, value);
 
         // Setting again overwrites
         bytes32 v2 = keccak256("asdf");
         andromeda.volatileSet(bytes32("test"), v2);
-        bytes32 v2check = andromeda.volatileGet(bytes32("test"));
+        bytes32 v2check = bytes32(andromeda.volatileGet(bytes32("test")));
         assertEq(v2check, v2);
     }
 }

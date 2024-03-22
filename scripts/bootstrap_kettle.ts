@@ -23,7 +23,7 @@ async function main() {
     console.log("Key manager already bootstrapped with "+keyManagerPub);
     return
   }
-
+  // 1st. Bootstrap the key manager
   await kettle_advance(kettle);
   const bootstrapTxData = await KM.offchain_Bootstrap.populateTransaction();
   let resp = await kettle_execute(kettle, bootstrapTxData.to, bootstrapTxData.data);
@@ -37,6 +37,37 @@ async function main() {
 
   const onchainBootstrapTx = await (await KM.onchain_Bootstrap(offchainBootstrapResult._xPub, offchainBootstrapResult.att)).wait();
   console.log("bootstrapped "+offchainBootstrapResult._xPub+" in "+onchainBootstrapTx.hash);
+
+  // 2nd. Register the key manager
+  await kettle_advance(kettle);
+  const registerTxData = await KM.offchain_Register.populateTransaction();
+  resp = await kettle_execute(kettle, registerTxData.to, registerTxData.data);
+
+  const registerResult = JSON.parse(resp);
+  if (registerResult.Success === undefined) {
+    throw("registration did not succeed: "+JSON.stringify(resp));
+  }
+
+  const offchainRegisterResult = KM.interface.decodeFunctionResult(KM.offchain_Register.fragment, registerResult.Success.output.Call).toObject();
+
+  const onchainRegisterTx = await (await KM.onchain_Register(offchainRegisterResult.addr, offchainRegisterResult.myPub, offchainRegisterResult.att)).wait();
+  console.log("registered "+offchainRegisterResult.addr+" with the pubkey "+offchainRegisterResult.myPub+" in "+onchainRegisterTx.hash);
+
+  // 3rd onboard the key manager
+  await kettle_advance(kettle);
+  const onboardTxData = await KM.offchain_Onboard.populateTransaction(offchainRegisterResult.addr);
+  resp = await kettle_execute(kettle, onboardTxData.to, onboardTxData.data);
+
+  const onboardResult = JSON.parse(resp);
+  if (onboardResult.Success === undefined) {
+    throw("onboarding did not succeed: "+JSON.stringify(resp));
+  }
+
+  const offchainOnboardResult = KM.interface.decodeFunctionResult(KM.offchain_Onboard.fragment, onboardResult.Success.output.Call).toObject();
+
+  const onchainOnboardTx = await (await KM.onchain_Onboard(offchainRegisterResult.addr, offchainOnboardResult.ciphertext)).wait();
+  console.log("onboarded "+offchainRegisterResult.addr+" in "+onchainOnboardTx.hash);
+
 }
 
 main().catch((error) => {

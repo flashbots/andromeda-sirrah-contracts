@@ -97,7 +97,6 @@ async function deploy() {
 
   const SealedAuction = await deploy_artifact_direct(LocalConfig.SEALED_AUCTION_ARTIFACT, wallet, KM.target, 5);
   await kettle_advance(kettle);
-
   await derive_key(await SealedAuction.getAddress(), kettle, KM);
   await testSA(SealedAuction, kettle);
 }
