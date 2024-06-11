@@ -15,6 +15,7 @@ import {V3Struct} from "automata-dcap-v3-attestation/lib/QuoteV3Auth/V3Struct.so
 import {V3Parser} from "automata-dcap-v3-attestation/lib/QuoteV3Auth/V3Parser.sol";
 
 interface Vm {
+    function warp(uint) external view;
     function ffi(string[] calldata commandInput) external view returns (bytes memory result);
     function setEnv(string calldata name, string calldata value) external;
     function envOr(string calldata key, bytes32 defaultValue) external returns (bytes32 value);
@@ -23,24 +24,6 @@ interface Vm {
     function parseJson(string memory json, string memory key) external view;
     function parseBytes(string memory b) external view returns (bytes memory);
     function projectRoot() external view returns (string memory);
-}
-
-contract Tester {
-    function configureQeIdentityJson(
-        EnclaveIdStruct.EnclaveId calldata qeIdentityInput
-    ) public {
-	//console2.log("configureQeIdentityJson");
-        //console2.logBytes(msg.data);
-    }
-    
-    function configureTcbInfoJson(
-        string calldata fmspc,
-        TCBInfoStruct.TCBInfo calldata tcbInfoInput
-    ) public {
-	//console2.log("configureTcbInfoJson");
-        //console2.logBytes(msg.data);
-    }
-    
 }
 
 contract AndromedaRemote is IAndromeda, DcapDemo {
@@ -52,37 +35,37 @@ contract AndromedaRemote is IAndromeda, DcapDemo {
     constructor(address sigVerifyLib) DcapDemo(sigVerifyLib) {}
 
     function initialize() public {
-	Tester t = new Tester();
-	
         // This is the dummy enclave from the service
         // https://github.com/amiller/gramine-dummy-attester/tree/dcap
-        setMrEnclave(bytes32(0xdc43f8c42d8e5f52c8bbd68f426242153f0be10630ff8cca255129a3ca03d273), true);
+	setMrSigner(bytes32(0x1cf2e52911410fbf3f199056a98d58795a559a2e800933f7fcd13d048462271c), true);
+        setMrEnclave(bytes32(0xed24ce78cd65438dc3b74e549b1ad5c591dba88e2078e676fca600ebbec21370), true);
+
+        // Set the timestamp (to avoid certificate expiry check);
+        vm.warp(1718132125);
 
         // By setting the report check, we now have to check mrsigner
         // AND mrenclave. Even though this is a little redundant!
         // We should modify upstream for this.
         // In the meantime we can make it easy to set mrsigner trusted
-        toggleLocalReportCheck();
+        //toggleLocalReportCheck();
 
         // Load Quoting Enclave identity (part of the tcb, signed by intel)
         {
             string memory p = "test/fixtures/quotingenclave-identity.json";
             EnclaveIdStruct.EnclaveId memory s = parseIdentity(p);
-	    //console2.log('configureQeIdentityJson');
-	    //console2.logBytes(abi.encode(s));
             vm.prank(address(owner));
             this.configureQeIdentityJson(s);
-            t.configureQeIdentityJson(s);	    
         }
         // Load one of the TCB Infos. These are signed by Intel. But here the signature isn't checked. FIXME
         {
             TCBInfoStruct.TCBInfo memory s = parseTcbInfo("test/fixtures/tcbInfo.json");
-	    //console2.log('configureTcbInfoJson');
-	    //console2.logBytes(abi.encodePacked(s.fmspc));
-	    //console2.logBytes(abi.encode(s));
             vm.prank(address(owner));
             this.configureTcbInfoJson(s.fmspc, s);
-            t.configureTcbInfoJson(s.fmspc, s);
+        }
+        {
+            TCBInfoStruct.TCBInfo memory s = parseTcbInfo("test/fixtures/tcbInfo2.json");
+            vm.prank(address(owner));
+            this.configureTcbInfoJson(s.fmspc, s);
         }
     }
 
@@ -204,7 +187,7 @@ contract AndromedaRemote is IAndromeda, DcapDemo {
     struct TCBLevelObj {
         uint256 pcesvn;
         uint256[] sgxTcbCompSvnArr;
-        string status;
+        TCBInfoStruct.TCBStatus status;
     }
 
     function parseIdentity(string memory path) public view returns (EnclaveIdStruct.EnclaveId memory r) {
@@ -230,7 +213,8 @@ contract AndromedaRemote is IAndromeda, DcapDemo {
 
     function parseTcbInfo(string memory path) public view returns (TCBInfoStruct.TCBInfo memory) {
         string memory json = vm.readFile(path);
-        bytes memory tcbInfo = json.parseRaw(".tcbInfo");
+        bytes memory tcbInfo = json.parseRaw(".");
+	//console2.logBytes(tcbInfo);
         TCBInfo memory t = abi.decode(tcbInfo, (TCBInfo));
         TCBInfoStruct.TCBInfo memory r;
         r.fmspc = t.fmspc;
@@ -238,19 +222,7 @@ contract AndromedaRemote is IAndromeda, DcapDemo {
         r.tcbLevels = new TCBInfoStruct.TCBLevelObj[](t.tcbLevels.length);
         for (uint256 i = 0; i < t.tcbLevels.length; i++) {
             r.tcbLevels[i].pcesvn = t.tcbLevels[i].pcesvn;
-            if (t.tcbLevels[i].status.toSlice().equals("UpToDate".toSlice())) {
-                r.tcbLevels[i].status = TCBInfoStruct.TCBStatus.OK;
-            } else if (t.tcbLevels[i].status.toSlice().equals("SWHardeningNeeded".toSlice())) {
-                r.tcbLevels[i].status = TCBInfoStruct.TCBStatus.TCB_SW_HARDENING_NEEDED;
-            } else if (t.tcbLevels[i].status.toSlice().equals("ConfigurationAndSWHardeningNeeded".toSlice())) {
-                r.tcbLevels[i].status = TCBInfoStruct.TCBStatus.TCB_CONFIGURATION_AND_SW_HARDENING_NEEDED;
-            } else if (t.tcbLevels[i].status.toSlice().equals("OutOfDate".toSlice())) {
-                r.tcbLevels[i].status = TCBInfoStruct.TCBStatus.TCB_OUT_OF_DATE;
-            } else if (t.tcbLevels[i].status.toSlice().equals("OutOfDateConfigurationNeeded".toSlice())) {
-                r.tcbLevels[i].status = TCBInfoStruct.TCBStatus.TCB_OUT_OF_DATE_CONFIGURATION_NEEDED;
-            } else {
-                r.tcbLevels[i].status = TCBInfoStruct.TCBStatus.TCB_UNRECOGNIZED;
-            }
+            r.tcbLevels[i].status = t.tcbLevels[i].status;
             r.tcbLevels[i].sgxTcbCompSvnArr = t.tcbLevels[i].sgxTcbCompSvnArr;
         }
         return r;
