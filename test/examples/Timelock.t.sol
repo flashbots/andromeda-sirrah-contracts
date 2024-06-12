@@ -21,14 +21,6 @@ contract TimelockTest is Test {
         SigVerifyLib lib = new SigVerifyLib();
         andromeda = new AndromedaRemote(address(lib));
         andromeda.initialize();
-        vm.warp(1701528486);
-
-        andromeda.setMrSigner(
-            bytes32(
-                0x1cf2e52911410fbf3f199056a98d58795a559a2e800933f7fcd13d048462271c
-            ),
-            true
-        );
 
         // To ensure we don't use the same address with volatile storage
         vm.prank(vm.addr(uint256(keccak256("examples/Timelock.t.sol"))));

@@ -1,6 +1,6 @@
 import json
 import sys
-import urllib.request
+from urllib.request import urlopen, Request
 #import eth_abi
 import base64
 from binascii import hexlify
@@ -11,11 +11,10 @@ if __name__ == '__main__':
         sys.exit(1)
     msg = sys.argv[1]
     assert len(bytes.fromhex(msg)) == 64
-    obj = urllib.request.urlopen(f"http://dummyattest.ln.soc1024.com/dcap/{msg}").read()
-
-    lines = obj.split(b'\n')
-    
-    sys.stdout.buffer.write(lines[-1]+b'\n')
+    url = f"https://dcap-dummy.sirrah.suave.flashbots.net/dcap/{msg}"
+    req = Request(url, headers={'User-Agent' : "Magic Browser"})
+    obj = urlopen(req).read()
+    sys.stdout.buffer.write(obj+b'\n')
     #print("abidata:")
     #print(hexlify(abidata))
     #print("sig:")

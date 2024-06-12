@@ -25,18 +25,6 @@ contract DcapVerifyTest is Test {
         SigVerifyLib lib = new SigVerifyLib();
         andromeda = new AndromedaRemote(address(lib));
         andromeda.initialize();
-
-        // FIXME! This shouldn't be necessary, but need to change
-        // upstream
-        // This one from andrew
-        andromeda.setMrSigner(bytes32(0x1cf2e52911410fbf3f199056a98d58795a559a2e800933f7fcd13d048462271c), true);
-
-        // This one from automata
-        andromeda.setMrSigner(bytes32(0x8c4f5775d796503e96137f77c68a829a0056ac8ded70140b081b094490c57bff), true);
-        andromeda.setMrEnclave(bytes32(0x185237a9e29c9c47ea060b3740a285ce2e36a0b7b11e049488f4c0c77329a7a0), true);
-
-        // Set the timestamp (to avoid certificate expiry check);
-        vm.warp(1701528486);
     }
 
     function testDecode() public {
@@ -45,6 +33,12 @@ contract DcapVerifyTest is Test {
     }
 
     function testVerify() public {
+	// For the included test quote
+        andromeda.setMrEnclave(bytes32(0x185237a9e29c9c47ea060b3740a285ce2e36a0b7b11e049488f4c0c77329a7a0), true);
+    
+        // Set the timestamp (to avoid certificate expiry check);
+        vm.warp(1701528486);
+	
         // Test a pre-recorded attestation
         string memory s = vm.readFile("test/fixtures/testquote.hex");
         bytes memory quote = vm.parseBytes(s);
