@@ -12,6 +12,7 @@ contract Andromeda is IAndromeda, DcapDemo {
     address public constant ATTEST_ADDR = 0x0000000000000000000000000000000000040700;
     address public constant VOLATILESET_ADDR = 0x0000000000000000000000000000000000040701;
     address public constant VOLATILEGET_ADDR = 0x0000000000000000000000000000000000040702;
+    address public constant TDX_DCAP_VERIFY_QUOTE = 0x0000000000000000000000000000000000040800;
     address public constant RANDOM_ADDR = 0x0000000000000000000000000000000000040703;
     address public constant SEALINGKEY_ADDR = 0x0000000000000000000000000000000000040704;
     address public constant SHA512_ADDR = 0x0000000000000000000000000000000000050700;
@@ -45,6 +46,12 @@ contract Andromeda is IAndromeda, DcapDemo {
             return false;
         }
         return this.verifyAttestation(att);
+    }
+
+    function verifyTDXDCAPQuote(bytes memory quote, string memory pckCertPem, string memory pckCrlPem, string memory tcbInfoJson, string memory qeIdentityJson) external view override returns (uint) {
+        (bool success, bytes memory status) = TDX_DCAP_VERIFY_QUOTE.staticcall(abi.encodePacked(quote, pckCertPem, pckCrlPem, tcbInfoJson, qeIdentityJson));
+        require(success);
+        return abi.decode(status, (uint));
     }
 
     function localRandom() external view override returns (bytes32) {

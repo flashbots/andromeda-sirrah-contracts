@@ -94,6 +94,11 @@ contract AndromedaRemote is IAndromeda, DcapDemo {
         return this.verifyAttestation(att);
     }
 
+
+    function verifyTDXDCAPQuote(bytes memory quote, string memory pckCertPem, string memory pckCrlPem, string memory tcbInfoJson, string memory qeIdentityJson) external view override returns (uint) {
+        return uint(0);
+    }
+
     function localRandom() public view returns (bytes32) {
         string[] memory inputs = new string[](2);
         inputs[0] = "sh";

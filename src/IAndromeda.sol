@@ -9,6 +9,7 @@ interface IAndromeda is IHash {
     function verifySgx(address caller, bytes32 appData, bytes memory att) external view returns (bool);
     function volatileSet(bytes32 tag, bytes32 value) external;
     function volatileGet(bytes32 tag) external returns (bytes32);
+    function verifyTDXDCAPQuote(bytes memory quote, string memory pckCertPem, string memory pckCrlPem, string memory tcbInfoJson, string memory qeIdentityJson) external view returns (uint);
     function localRandom() external view returns (bytes32);
     function sealingKey(bytes32 tag) external view returns (bytes32);
 
