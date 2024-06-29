@@ -18,7 +18,7 @@ interface Vm {
     function warp(uint) external view;
     function ffi(string[] calldata commandInput) external view returns (bytes memory result);
     function setEnv(string calldata name, string calldata value) external;
-    function envOr(string calldata key, bytes32 defaultValue) external returns (bytes32 value);
+    function envOr(string calldata key, bytes memory defaultValue) external returns (bytes memory value);
     function readFile(string calldata path) external view returns (string memory data);
     function prank(address caller) external;
     function parseJson(string memory json, string memory key) external view;
@@ -122,10 +122,10 @@ contract AndromedaRemote is IAndromeda, DcapDemo {
         vm.setEnv(env, iToHex(abi.encodePacked(value)));
     }
 
-    function volatileGet(bytes32 tag) public returns (bytes32) {
+    function volatileGet(bytes32 tag) public returns (bytes memory) {
         address caller = msg.sender;
         string memory env = toEnv(activeHost, caller, tag);
-        return vm.envOr(env, bytes32(""));
+        return vm.envOr(env, bytes(""));
     }
 
     function doHTTPRequest(IAndromeda.HttpRequest memory) external pure returns (bytes memory) {

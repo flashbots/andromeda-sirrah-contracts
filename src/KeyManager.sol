@@ -90,11 +90,30 @@ contract KeyManager_v0 is KeyManagerBase {
         return _derivedPriv(msg.sender);
     }
 
-    function getSeed() private returns (bytes32) {
-        return Suave.volatileGet("seed");
+    function getSeed() internal returns (bytes32) {
+        bytes memory seed = Suave.volatileGet("seed");
+        // check if a seed was lost due a kettle restart and restore it
+        if(seed.length > 0) {
+            require(seed.length == 32, "Seed length is not 32 bytes");
+            return bytes32(seed);
+        }
+        return recoverSeed();
     }
 
-    function setSeed(bytes32 seed) private {
+    function recoverSeed() internal returns (bytes32) {
+        bytes32 myPriv = Suave.sealingKey("myPriv");
+        address addr = address(Secp256k1.deriveAddress(uint256(myPriv)));
+        // make sure that the kettle was onboarded
+        require(keccak256(ciphertexts[addr]) != keccak256(bytes("")));
+        /* TODO: followup: discover ways to restore the seed in case the sealing key is revoked or rotated
+            In this case, a need seed should be generated and everything that was encrypted or keys derived from the old seed should be re-encrypted or re-derived
+            Problem: the decryption here would fail and the execution will be interrupted due to wrong(new) private key */
+        bytes32 seed = abi.decode(PKE.decrypt(myPriv, ciphertexts[addr]), (bytes32));
+        setSeed(seed);
+        return seed;
+    }
+
+    function setSeed(bytes32 seed) internal {
         Suave.volatileSet("seed", seed);
     } 
 
@@ -122,13 +141,14 @@ contract KeyManager_v0 is KeyManagerBase {
     // 2. New node register phase
     // Mapping to nonzero indicates valid Kettle
     mapping(address => bytes) registry;
+    // Mapping kettles to their ciphertexts
+    mapping(address => bytes) public ciphertexts;
 
     function offchain_Register() public returns (address addr, bytes memory myPub, bytes memory att) {
-        require(keccak256(registry[addr]) == keccak256(bytes("")));
-
         bytes32 myPriv = Suave.sealingKey("myPriv");
         myPub = PKE.derivePubKey(myPriv);
         addr = address(Secp256k1.deriveAddress(uint256(myPriv)));
+        require(keccak256(registry[addr]) == keccak256(bytes("")));
         att = Suave.attestSgx(keccak256(abi.encodePacked("myPub", myPub, addr)));
         return (addr, myPub, att);
     }
@@ -150,6 +170,7 @@ contract KeyManager_v0 is KeyManagerBase {
 
     function onchain_Onboard(address addr, bytes memory ciphertext) public {
         // Note: nothing guarantees all ciphertexts on chain are valid
+        ciphertexts[addr] = ciphertext;
         emit Onboard(addr, ciphertext);
     }
 
@@ -159,5 +180,24 @@ contract KeyManager_v0 is KeyManagerBase {
         bytes32 _xPriv = bip32.newFromSeed(abi.encodePacked(seed)).key;
         require(Secp256k1.deriveAddress(uint256(_xPriv)) == xPub);
         setSeed(seed);
+    }
+}
+
+/* This contract is used for testing purposes and should never be used in production
+    It is used to expose the seed and restart and recovery functions for testing purposes 
+*/
+contract TestRecoverableKeyManagerWrapper is KeyManager_v0 {
+    constructor(address _Suave) KeyManager_v0(_Suave) {}
+
+    function getRecoveredSeed() public returns (bytes32) {
+        return super.recoverSeed();
+    }
+
+    function getCurrentSeed() public returns (bytes32) {
+        return bytes32(Suave.volatileGet("seed"));
+    }
+
+    function restartKettle() public {
+        super.setSeed(bytes32(0));
     }
 }
