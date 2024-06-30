@@ -33,6 +33,7 @@ contract KettleCash {
     // This produces an off-chain check with an empty attestation.
     // This can be deposited at the specified kettle.
     event Deposit(address depositor, uint amt, address kettle);
+    mapping (bytes32 serial => bool) deposits;
     uint deposit_counter;
     function onchain_Deposit(address kettle) public payable
     returns(Check memory c) {
@@ -40,6 +41,7 @@ contract KettleCash {
 	c.recipient = msg.sender;
 	c.kettle = kettle;
 	c.nonce = bytes32(deposit_counter);
+	deposits[CheckSerial(c)] = true;
 	deposit_counter += 1;
 	emit Deposit(msg.sender, msg.value, kettle);
     }
@@ -117,8 +119,19 @@ contract KettleCash {
     
     // Deposit a check
     function offchain_DepositCheck(Check memory check) public {
-	// Only valid if signed by a kettle
+	// Only cash checks pointing to this kettle
 	require(offchain_ThisKettle() == check.kettle);
+
+	// If a deposit, needs to be finalized on-chain
+	if (check.att.length == 0) {
+	    require(deposits[CheckSerial(check)]);
+	} else {
+	    // Otherwise needs need to have a valid attestation
+	    require(keymgr.verify(address(this), CheckSerial(check),
+				  check.att));
+	}
+	
+	// Only valid if signed by a kettle
 	bytes32 serial = CheckSerial(check);
 	bytes32 key = keccak256(abi.encodePacked("cashed",serial));
 	require(!_IsSpent(check));
