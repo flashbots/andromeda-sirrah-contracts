@@ -16,6 +16,7 @@ contract Andromeda is IAndromeda, DcapDemo {
     address public constant SEALINGKEY_ADDR = 0x0000000000000000000000000000000000040704;
     address public constant SHA512_ADDR = 0x0000000000000000000000000000000000050700;
     address public constant DO_HTTP_REQUEST = 0x0000000000000000000000000000000043200002;
+    address public constant X509_GENERATE_ADDR = 0x0000000000000000000000000000000000070700;
 
     function volatileSet(bytes32 key, bytes32 value) external override {
         bytes memory cdata = abi.encodePacked([key, value]);
@@ -71,6 +72,16 @@ contract Andromeda is IAndromeda, DcapDemo {
 
     function doHTTPRequest(IAndromeda.HttpRequest memory request) external returns (bytes memory) {
         (bool success, bytes memory data) = DO_HTTP_REQUEST.call(abi.encode(request));
+        require(success);
+        return abi.decode(data, (bytes));
+    }
+
+    function x509Generate(bytes calldata skPkcs8Der, string calldata domain, string calldata subject)
+        external
+        view
+        returns (bytes memory)
+    {
+        (bool success, bytes memory data) = X509_GENERATE_ADDR.staticcall(abi.encode(skPkcs8Der, domain, subject));
         require(success);
         return abi.decode(data, (bytes));
     }
