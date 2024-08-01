@@ -35,9 +35,11 @@ contract KeyHelper {
     function isInitialized() public view returns (bool) {
         return pubkey().length != 0;
     }
-    function pubkey() view public returns (bytes memory) {
+
+    function pubkey() public view returns (bytes memory) {
         return keymgr.derivedPub(address(this));
     }
+
     function offchain_pubkey() private returns (bytes memory) {
         bytes memory onchainPubkey = pubkey();
         if (onchainPubkey.length != 0) {
@@ -46,9 +48,11 @@ contract KeyHelper {
 
         return PKE.derivePubKey(privkey());
     }
+
     function privkey() private returns (bytes32) {
         return keymgr.derivedPriv();
     }
+
     function hashSecret() private returns (bytes32) {
         return auth_helper.hashSecret();
     }
@@ -56,12 +60,15 @@ contract KeyHelper {
     function encrypt(bytes memory message, bytes32 r) internal view returns (bytes memory) {
         return PKE.encrypt(pubkey(), r, message);
     }
+
     function encrypt(string memory message, bytes32 r) internal view returns (string memory) {
         return string(encrypt(abi.encodePacked(message), r));
     }
+
     function encrypt(bytes memory message) internal view returns (bytes memory) {
         return encrypt(message, keymgr.Suave().localRandom());
     }
+
     function encrypt(string memory message) internal view returns (string memory) {
         return string(encrypt(abi.encodePacked(message), keymgr.Suave().localRandom()));
     }
@@ -76,12 +83,15 @@ contract KeyHelper {
         // !!!! We should be using a different key for the hash! Coming soon once we have key derivation
         return abi.encode(ciphertext, keccak256(abi.encodePacked(hashSecret(), ciphertext)));
     }
+
     function auth_encrypt(string memory message, bytes32 r) internal returns (string memory) {
         return string(auth_encrypt(abi.encodePacked(message), r));
     }
+
     function auth_encrypt(bytes memory message) internal returns (bytes memory) {
         return auth_encrypt(message, keymgr.Suave().localRandom());
     }
+
     function auth_encrypt(string memory message) internal returns (string memory) {
         return string(auth_encrypt(abi.encodePacked(message), keymgr.Suave().localRandom()));
     }
@@ -95,4 +105,3 @@ contract KeyHelper {
         return (true, PKE.decrypt(privkey(), ciphertext));
     }
 }
-

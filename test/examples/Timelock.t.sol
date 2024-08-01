@@ -37,18 +37,13 @@ contract TimelockTest is Test {
 
         // Initialize the derived public key
         assertEq(timelock.isInitialized(), false);
-        (bytes memory dPub, bytes memory sig) = keymgr.offchain_DeriveKey(
-            address(timelock)
-        );
+        (bytes memory dPub, bytes memory sig) = keymgr.offchain_DeriveKey(address(timelock));
         keymgr.onchain_DeriveKey(address(timelock), dPub, sig);
         assertEq(timelock.isInitialized(), true);
 
         // Submit encrypted orders
         string memory message = "Suave timelock test message!32xr";
-        bytes memory ciph = timelock.encryptMessage(
-            message,
-            bytes32(uint(0xdead2123))
-        );
+        bytes memory ciph = timelock.encryptMessage(message, bytes32(uint256(0xdead2123)));
         timelock.submitEncrypted(ciph);
 
         vm.roll(60);

@@ -26,9 +26,7 @@ contract TimelockSetup2 is Script {
         console2.log("Running TimelockSetup2");
         // To ensure we don't use the same address with volatile storage
         // vm.prank(vm.addr(uint256(keccak256("examples/Timelock.t.sol"))));
-        KeyManager_v0 keymgr = new KeyManager_v0(
-            address(vm.envAddress("andromeda"))
-        );
+        KeyManager_v0 keymgr = new KeyManager_v0(address(vm.envAddress("andromeda")));
         (address xPub, bytes memory att) = keymgr.offchain_Bootstrap();
         keymgr.onchain_Bootstrap(xPub, att);
     }
