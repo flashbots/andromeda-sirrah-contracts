@@ -15,6 +15,7 @@ struct Bundle {
 // TODO: should probably be gated behind onlyOwner
 contract RedisStore is KeyHelper, WithRedis, WithRedisPubsub {
     bytes32 r;
+
     constructor(KeyManager_v0 keymgr, bytes32 _r) KeyHelper(keymgr) WithRedis() WithRedisPubsub() {
         r = _r;
     }
@@ -36,14 +37,17 @@ contract RedisStore is KeyHelper, WithRedis, WithRedisPubsub {
     }
 
     function subscribe(string memory topic) public {
-       pubsub().subscribe(_format_topic(topic));
+        pubsub().subscribe(_format_topic(topic));
     }
 
     function unsubscribe(string memory topic) public {
         pubsub().unsubscribe(_format_topic(topic));
     }
 
-    function get_message(string memory topic) public returns (bool /* msg present */, bool /* auth ok */, bytes memory /* message */) {
+    function get_message(string memory topic)
+        public
+        returns (bool, /* msg present */ bool, /* auth ok */ bytes memory /* message */ )
+    {
         // Requires subscribe is called first (per kettle!)
         bytes memory message = pubsub().get_message(_format_topic(topic));
         if (message.length == 0) {
@@ -56,6 +60,7 @@ contract RedisStore is KeyHelper, WithRedis, WithRedisPubsub {
     function _format_key(string memory key) private view returns (string memory) {
         return string(abi.encodePacked(keccak256(abi.encodePacked(r, key))));
     }
+
     function _format_topic(string memory topic) private view returns (string memory) {
         return string(abi.encodePacked(keccak256(abi.encodePacked(r, topic))));
     }
@@ -63,9 +68,10 @@ contract RedisStore is KeyHelper, WithRedis, WithRedisPubsub {
 
 contract BundleConfidentialStore is KeyHelper {
     RedisStore private redis;
+
     constructor(KeyManager_v0 _keymgr, address[] memory _allowedContracts) KeyHelper(_keymgr) {
         redis = new RedisStore(_keymgr, keccak256(abi.encodePacked(tx.origin, msg.sender, block.number)));
-        for (uint i = 0; i < _allowedContracts.length; i++) {
+        for (uint256 i = 0; i < _allowedContracts.length; i++) {
             allowedContracts[_allowedContracts[i]] = true;
         }
     }
@@ -80,6 +86,7 @@ contract BundleConfidentialStore is KeyHelper {
         Bundle memory bundle = abi.decode(decrypt(encryptedBundle), (Bundle));
         redis.publish("bundles", abi.encode(bundle));
     }
+
     function pollAndReturnBundle() external returns (bool msg_present, bool auth_ok, Bundle memory bundle) {
         (bool _msg_present, bool _auth_ok, bytes memory raw_message) = redis.get_message("bundles");
         msg_present = _msg_present;
@@ -91,12 +98,12 @@ contract BundleConfidentialStore is KeyHelper {
 
         return (msg_present, auth_ok, bundle);
     }
+
     function dbg_getBundlesByHeight(uint256 height) external returns (Bundle[] memory bundles) {
         allowedContracts[msg.sender] = true;
         return getBundlesByHeight(height);
     }
     /* End of debug functions */
-
 
     function addBundle(Bundle memory bundle) public onlyAllowed {
         internal_addBundle(bundle);
@@ -117,9 +124,9 @@ contract BundleConfidentialStore is KeyHelper {
         (bool found, bytes memory c_bundles_raw) = redis.get(string(abi.encodePacked("bundles-", bundle.height)));
         if (found && c_bundles_raw.length > 0) {
             bytes32[] memory c_bundles = abi.decode(c_bundles_raw, (bytes32[]));
-            n_bundles = new bytes32[](c_bundles.length+1);
+            n_bundles = new bytes32[](c_bundles.length + 1);
             n_bundles[c_bundles.length] = bundleHash;
-            for (uint i = 0; i < c_bundles.length; i++) {
+            for (uint256 i = 0; i < c_bundles.length; i++) {
                 n_bundles[i] = c_bundles[i];
             }
         } else {
@@ -138,7 +145,7 @@ contract BundleConfidentialStore is KeyHelper {
 
         bytes32[] memory c_bundles = abi.decode(c_bundles_raw, (bytes32[]));
         bundles = new Bundle[](c_bundles.length);
-        for (uint i = 0; i < c_bundles.length; i++) {
+        for (uint256 i = 0; i < c_bundles.length; i++) {
             (bool bundle_found, bytes memory bundle_raw) = redis.get(string(abi.encodePacked("bundle-", c_bundles[i])));
             if (!bundle_found || bundle_raw.length > 0) {
                 bundles[i] = abi.decode(bundle_raw, (Bundle));
@@ -155,8 +162,8 @@ contract BundleConfidentialStore is KeyHelper {
 
     // Call on each kettle to process synchronization messages
     // Returns how many messages were processed
-    function synchronize(uint maxMsgs) external returns (uint) {
-        for (uint i = 0; i < maxMsgs; i++) {
+    function synchronize(uint256 maxMsgs) external returns (uint256) {
+        for (uint256 i = 0; i < maxMsgs; i++) {
             (bool msg_present, bool msg_auth_ok, bytes memory raw_message) = redis.get_message("bundles");
             if (!msg_present) {
                 return i;
@@ -171,17 +178,20 @@ contract BundleConfidentialStore is KeyHelper {
         return maxMsgs;
     }
 
+    mapping(address => bool) allowedContracts;
 
-    mapping (address => bool) allowedContracts;
     modifier onlyAllowed() {
         require(msg.sender == address(this) || allowedContracts[msg.sender], "caller not allowed");
         _;
     }
 
-
     /* If you want to pass in encrypted data, first encrypt it (yourself using the pubkey or encrypt() with your local node), it and then call */
     /* Usually however, you'll want to handle encryption in the parent contract (see DBBSample) */
-    function _decrypt_and_call(bytes memory ciphertext, bytes memory cdata) onlyAllowed external returns (bytes memory) {
+    function _decrypt_and_call(bytes memory ciphertext, bytes memory cdata)
+        external
+        onlyAllowed
+        returns (bytes memory)
+    {
         bytes memory plaintext = decrypt(ciphertext);
         (bool call_ok, bytes memory return_data) = address(this).call(bytes.concat(cdata, plaintext));
         require(call_ok);
@@ -193,10 +203,11 @@ contract BundleConfidentialStore is KeyHelper {
 contract DBBSample is KeyHelper {
     BundleConfidentialStore store;
     Builder builder;
+
     constructor(KeyManager_v0 keymgr) KeyHelper(keymgr) {
         address[] memory allowedContracts = new address[](1);
         allowedContracts[0] = address(this);
-        store = new BundleConfidentialStore(keymgr, allowedContracts); 
+        store = new BundleConfidentialStore(keymgr, allowedContracts);
         builder = new Builder();
     }
 
@@ -209,6 +220,7 @@ contract DBBSample is KeyHelper {
     function encryptBundle(Bundle memory bundle) public view returns (bytes memory) {
         return encrypt(abi.encode(bundle));
     }
+
     function decryptBundle(bytes memory ciphertext) internal returns (Bundle memory) {
         return abi.decode(decrypt(ciphertext), (Bundle));
     }
@@ -232,8 +244,8 @@ contract DBBSample is KeyHelper {
     function buildBlock(uint256 height) external {
         /* Make sure you are calling synchronize_store in the background! */
         Bundle[] memory bundles = store.getBundlesByHeight(height);
-        uint256 _blockProfit = builder.buildBlock(bundles);
         /* Do something with the block */
+        builder.buildBlock(bundles);
     }
 }
 
@@ -245,11 +257,9 @@ contract Builder {
 
     function buildBlock(Bundle[] memory bundles) public pure returns (uint256) {
         uint256 profit = 0;
-        for (uint i = 0; i < bundles.length; i++) {
+        for (uint256 i = 0; i < bundles.length; i++) {
             profit += bundles[i].profit;
         }
         return profit;
     }
 }
-
-

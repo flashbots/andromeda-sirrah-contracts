@@ -17,7 +17,7 @@ contract KeyManager_v0_Test is Test {
 
     function setUp() public {
         andromeda = new AndromedaForge();
-        vm.prank(vm.addr(uint(keccak256("KeyManager.t.sol"))));
+        vm.prank(vm.addr(uint256(keccak256("KeyManager.t.sol"))));
         keymgr = new KeyManager_v0(address(andromeda));
 
         alice = vm.createWallet("alice");
@@ -35,16 +35,14 @@ contract KeyManager_v0_Test is Test {
         // 2. Register a new node
         // 2a. Offchain generate a register request
         andromeda.switchHost("bob");
-        (address bob_kettle, bytes memory bPub, bytes memory attB) = keymgr
-            .offchain_Register();
+        (address bob_kettle, bytes memory bPub, bytes memory attB) = keymgr.offchain_Register();
         // 2b. Onchain submit the request
         keymgr.onchain_Register(bob_kettle, bPub, attB);
 
         // 2.1 Register a new node
         // 2.1a. Offchain generate a register request
         andromeda.switchHost("charlie");
-        (address charlie_kettle, bytes memory cPub, bytes memory attC) = keymgr
-            .offchain_Register();
+        (address charlie_kettle, bytes memory cPub, bytes memory attC) = keymgr.offchain_Register();
         // 2.1b. Onchain submit the request
         keymgr.onchain_Register(charlie_kettle, cPub, attC);
 
@@ -75,9 +73,7 @@ contract KeyManager_v0_Test is Test {
         keymgr.onchain_Bootstrap(xPub, att);
 
         // Show the derived key associated with this contract.
-        (bytes memory dPub, bytes memory sig) = keymgr.offchain_DeriveKey(
-            address(this)
-        );
+        (bytes memory dPub, bytes memory sig) = keymgr.offchain_DeriveKey(address(this));
         keymgr.onchain_DeriveKey(address(this), dPub, sig);
 
         bytes32 dPriv = keymgr.derivedPriv();

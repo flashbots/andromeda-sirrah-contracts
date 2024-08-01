@@ -33,12 +33,12 @@ contract DcapVerifyTest is Test {
     }
 
     function testVerify() public {
-	// For the included test quote
+        // For the included test quote
         andromeda.setMrEnclave(bytes32(0x185237a9e29c9c47ea060b3740a285ce2e36a0b7b11e049488f4c0c77329a7a0), true);
-    
+
         // Set the timestamp (to avoid certificate expiry check);
         vm.warp(1701528486);
-	
+
         // Test a pre-recorded attestation
         string memory s = vm.readFile("test/fixtures/testquote.hex");
         bytes memory quote = vm.parseBytes(s);

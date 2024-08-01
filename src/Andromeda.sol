@@ -17,21 +17,21 @@ contract Andromeda is IAndromeda, DcapDemo {
     address public constant SHA512_ADDR = 0x0000000000000000000000000000000000050700;
     address public constant DO_HTTP_REQUEST = 0x0000000000000000000000000000000043200002;
 
-    function volatileSet(bytes32 key, bytes32 value) external override {
+    function volatileSet(bytes32 key, bytes32 value) external view override {
         bytes memory cdata = abi.encodePacked([key, value]);
         (bool success, bytes memory _out) = VOLATILESET_ADDR.staticcall(cdata);
         _out;
         require(success);
     }
 
-    function volatileGet(bytes32 key) external override returns (bytes32) {
+    function volatileGet(bytes32 key) external view override returns (bytes32) {
         (bool success, bytes memory value) = VOLATILEGET_ADDR.staticcall(abi.encodePacked((key)));
         require(success);
         require(value.length == 32);
         return abi.decode(value, (bytes32));
     }
 
-    function attestSgx(bytes32 appData) external override returns (bytes memory) {
+    function attestSgx(bytes32 appData) external view override returns (bytes memory) {
         (bool success, bytes memory attestBytes) = ATTEST_ADDR.staticcall(abi.encodePacked(msg.sender, appData));
         require(success);
         return attestBytes;

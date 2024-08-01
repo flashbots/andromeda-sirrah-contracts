@@ -15,7 +15,7 @@ import {V3Struct} from "automata-dcap-v3-attestation/lib/QuoteV3Auth/V3Struct.so
 import {V3Parser} from "automata-dcap-v3-attestation/lib/QuoteV3Auth/V3Parser.sol";
 
 interface Vm {
-    function warp(uint) external view;
+    function warp(uint256) external view;
     function ffi(string[] calldata commandInput) external view returns (bytes memory result);
     function setEnv(string calldata name, string calldata value) external;
     function envOr(string calldata key, bytes32 defaultValue) external returns (bytes32 value);
@@ -37,7 +37,7 @@ contract AndromedaRemote is IAndromeda, DcapDemo {
     function initialize() public {
         // This is the dummy enclave from the service
         // https://github.com/amiller/gramine-dummy-attester/tree/dcap
-	setMrSigner(bytes32(0x1cf2e52911410fbf3f199056a98d58795a559a2e800933f7fcd13d048462271c), true);
+        setMrSigner(bytes32(0x1cf2e52911410fbf3f199056a98d58795a559a2e800933f7fcd13d048462271c), true);
         setMrEnclave(bytes32(0xed24ce78cd65438dc3b74e549b1ad5c591dba88e2078e676fca600ebbec21370), true);
 
         // Set the timestamp (to avoid certificate expiry check);
@@ -70,10 +70,10 @@ contract AndromedaRemote is IAndromeda, DcapDemo {
     }
 
     function attestSgx(bytes32 appData) public view returns (bytes memory) {
-	console2.log("attestSgx remote");
+        console2.log("attestSgx remote");
         bytes memory userdata = abi.encode(address(this), abi.encodePacked(msg.sender, appData));
-	console2.logBytes(userdata);
-	bytes memory userReport = abi.encodePacked(sha256(userdata), uint(0));
+        console2.logBytes(userdata);
+        bytes memory userReport = abi.encodePacked(sha256(userdata), uint256(0));
         string[] memory inputs = new string[](3);
         inputs[0] = "python";
         inputs[1] = "ffi/ffi-fetchquote-dcap.py";
@@ -83,10 +83,10 @@ contract AndromedaRemote is IAndromeda, DcapDemo {
     }
 
     function verifySgx(address caller, bytes32 appData, bytes memory att) public view returns (bool) {
-	console2.log("verifySgx remote");
-	//console2.logBytes(att);
+        console2.log("verifySgx remote");
+        //console2.logBytes(att);
         bytes memory userdata = abi.encode(address(this), abi.encodePacked(caller, appData));
-	bytes memory userReport = abi.encodePacked(sha256(userdata), uint(0));
+        bytes memory userReport = abi.encodePacked(sha256(userdata), uint256(0));
         (,, V3Struct.EnclaveReport memory r,,) = V3Parser.parseInput(att);
         if (keccak256(r.reportData) != keccak256(userReport)) {
             return false;
@@ -214,7 +214,7 @@ contract AndromedaRemote is IAndromeda, DcapDemo {
     function parseTcbInfo(string memory path) public view returns (TCBInfoStruct.TCBInfo memory) {
         string memory json = vm.readFile(path);
         bytes memory tcbInfo = json.parseRaw(".");
-	//console2.logBytes(tcbInfo);
+        //console2.logBytes(tcbInfo);
         TCBInfo memory t = abi.decode(tcbInfo, (TCBInfo));
         TCBInfoStruct.TCBInfo memory r;
         r.fmspc = t.fmspc;

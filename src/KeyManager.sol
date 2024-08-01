@@ -18,7 +18,7 @@ abstract contract KeyManagerBase {
     // separator
     function attest(bytes32 appData) public returns (bytes memory) {
         bytes32 digest = keccak256(abi.encodePacked(msg.sender, appData));
-        
+
         return Secp256k1.sign(uint256(xPriv()), digest);
     }
 
@@ -82,7 +82,7 @@ contract KeyManager_v0 is KeyManagerBase {
     function _derivedPriv(address a) internal override returns (bytes32) {
         bytes32 seed = getSeed();
         uint32 addrIndex = addressToBIP32HardenedIndex(a);
-        (BIP32.ExtendedPrivateKey memory _xPriv, BIP32.ExtendedPublicKey memory _xPub) = bip32.deriveChildKeyPairFromSeed(abi.encodePacked(seed), addrIndex);
+        (BIP32.ExtendedPrivateKey memory _xPriv,) = bip32.deriveChildKeyPairFromSeed(abi.encodePacked(seed), addrIndex);
         return _xPriv.key;
     }
 
@@ -96,7 +96,7 @@ contract KeyManager_v0 is KeyManagerBase {
 
     function setSeed(bytes32 seed) private {
         Suave.volatileSet("seed", seed);
-    } 
+    }
 
     function xPriv() internal override returns (bytes32) {
         return bip32.newFromSeed(abi.encodePacked(getSeed())).key;
@@ -111,7 +111,6 @@ contract KeyManager_v0 is KeyManagerBase {
         setSeed(seed);
         att = Suave.attestSgx(keccak256(abi.encodePacked("xPub", _xPub)));
     }
-
 
     function onchain_Bootstrap(address _xPub, bytes memory att) public {
         require(xPub == address(0)); // only once
