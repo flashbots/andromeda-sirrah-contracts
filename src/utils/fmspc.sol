@@ -15,11 +15,11 @@ contract FmspcParser {
         pemCertLib = new PEMCertChainLib();
     }
 
-    function extract_fmspc_from_bootstrap(address, bytes calldata att) public returns (bool, string memory) {
+    function extract_fmspc_from_bootstrap(address, bytes calldata att) public view returns (bool, string memory) {
         return extract_fmspc(att);
     }
 
-    function extract_fmspc(bytes calldata quote) public returns (bool, string memory) {
+    function extract_fmspc(bytes calldata quote) public view returns (bool, string memory) {
         (bool successful,,,, V3Struct.ECDSAQuoteV3AuthData memory authDataV3) = V3Parser.parseInput(quote);
         if (!successful) {
             return (false, "could not parse quote");

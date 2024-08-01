@@ -11,6 +11,7 @@ contract TimelockSetup is Script {
     function run() public {
         console2.log("Running TimelockSetup");
         SigVerifyLib lib = SigVerifyLib(vm.envAddress("sigVerifyLib"));
+        console2.log("lib=%s", address(lib));
         AndromedaRemote andromeda = AndromedaRemote(vm.envAddress("andromeda"));
         console2.log("andromeda=%s", address(andromeda));
         andromeda.initialize();

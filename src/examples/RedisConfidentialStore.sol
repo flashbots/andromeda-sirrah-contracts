@@ -244,8 +244,8 @@ contract DBBSample is KeyHelper {
     function buildBlock(uint256 height) external {
         /* Make sure you are calling synchronize_store in the background! */
         Bundle[] memory bundles = store.getBundlesByHeight(height);
-        uint256 _blockProfit = builder.buildBlock(bundles);
         /* Do something with the block */
+        builder.buildBlock(bundles);
     }
 }
 

@@ -21,6 +21,7 @@ contract CryptoTest is Test {
         address a = Secp256k1.deriveAddress(uint256(sk));
         bytes memory ser = bytes.concat(bytes32(qx), bytes32(qy));
         assertEq(address(0x9d8A62f656a8d1615C1294fd71e9CFb3E4855A4F), a);
+        assertEq(address(0x9d8A62f656a8d1615C1294fd71e9CFb3E4855A4F), address(uint160(uint256(keccak256(ser)))));
     }
 
     function test_encryption() public {
