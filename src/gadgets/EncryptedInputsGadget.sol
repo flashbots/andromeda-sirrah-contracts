@@ -4,68 +4,90 @@ import {VersionGadget} from "src/gadgets/VersionGadget.sol";
 import {AttestationGadget} from "src/gadgets/AttestationGadget.sol";
 import {CensorshipResistanceGadget} from "src/gadgets/CensorshipResistanceGadget.sol";
 
+import {Secp256k1} from "src/crypto/secp256k1.sol";
 import {PKE} from "src/crypto/encryption.sol";
 import {BIP32} from "src/BIP32.sol";
 
 import {IAndromeda} from "src/IAndromeda.sol";
 
+struct encrypted_bytes {
+    bytes data;
+}
+
 // CensorshipResistanceGadget is used to enforce CR on pubkey rotation
 // AttestationGadget is used to update pubkey onchain
 abstract contract EncryptedInputsGadget is VersionGadget, AttestationGadget, CensorshipResistanceGadget {
-    function km() internal pure virtual returns (KeyManager);
+    function km() internal view virtual returns (KeyManager);
 
-    bytes private constant input_enc_derivation_path_prefix = "m/1'";
+    string private constant input_enc_derivation_path_prefix = "m/1'/";
 
     // Encrypt secret inputs with this key! Rotation triggers new cr epoch.
     bytes public contract_pubkey = bytes("");
     uint256 private pubkey_nonce = 0;
+    function current_pubkey_nonce() public returns (uint256) {
+        return pubkey_nonce;
+    }
 
     /* Should only be called on local, trusted node! */
     function encrypt_contract_inputs(bytes memory plaintext, bytes32 r)
         public
         view
-        returns (uint256, /* cr_epoch */ uint256, /* pubkey_nonce */ bytes memory /* ciphertext */ )
+        returns (uint256 epoch, uint256 nonce, encrypted_bytes memory ciphertext)
     {
-        return (cr_epoch, pubkey_nonce, PKE.encrypt(contract_pubkey, r, plaintext));
+        epoch = current_epoch();
+        nonce = pubkey_nonce;
+        ciphertext = encrypted_bytes(PKE.encrypt(contract_pubkey, r, plaintext));
     }
-    /* Called internally */
 
-    function decrypt_contract_inputs(uint256 epoch, uint256 nonce, bytes memory ciphertext)
+    function encrypt_output(bytes memory pubkey, bytes memory plaintext)
         internal
-        check_cr(epoch)
-        returns (bytes memory)
+        view
+        returns (encrypted_bytes memory)
     {
-        return km().decrypt(_input_enc_derive_path(nonce), ciphertext);
+        bytes32 r = Suave().localRandom();
+        bytes memory encrypted_data = PKE.encrypt(pubkey, r, plaintext);
+        return encrypted_bytes(encrypted_data);
+    }
+
+    /* Called internally */
+    function decrypt_contract_inputs(encrypted_bytes memory ciphertext)
+        internal
+        returns (bytes memory plaintext)
+    {
+        plaintext = km().decrypt(_input_enc_derive_path(pubkey_nonce), ciphertext.data);
     }
 
     /* Only on local node! */
-    function encrypt_call(bytes4 selector, bytes memory encoded_inputs, bytes32 r)
+    function encrypt_call(bytes4 selector, bytes memory encoded_inputs, bytes32 r, address caller)
         public
         view
-        returns (uint256, /* cr_epoch */ uint256, /* pubkey_nonce */ bytes memory /* calldata */ )
+        returns (uint256, uint256, bytes memory)
     {
-        return (cr_epoch, pubkey_nonce, PKE.encrypt(contract_pubkey, r, abi.encodePacked(selector, encoded_inputs)));
+        return (current_epoch(), pubkey_nonce, PKE.encrypt(contract_pubkey, r, abi.encode(selector, encoded_inputs, caller)));
     }
     /* Manage encryption at the call level */
 
-    function ecrypted_dispatch(
+    function encrypted_dispatch(
         uint256 epoch,
         uint256 nonce,
         bytes memory encrypted_calldata,
         bytes memory return_pubkey,
         bytes memory signature
-    ) public check_cr(epoch) returns (bytes memory) {
-        require(pubkey_nonce == nonce);
+    ) public check_cr(epoch) returns (encrypted_bytes memory return_data) {
+        require(pubkey_nonce == nonce, "enc: invalid pubkey nonce");
+        bytes memory raw_encoded_calldata = km().decrypt(_input_enc_derive_path(nonce), encrypted_calldata);
+        (bytes4 selector, bytes memory raw_calldata, address caller) = abi.decode(raw_encoded_calldata, (bytes4, bytes, address));
         require(
-            PKE.verify(
-                return_pubkey, keccak256(abi.encodePacked(epoch, nonce, encrypted_calldata, return_pubkey)), signature
-            )
+            Secp256k1.verify(
+                caller, // can we derive the caller from return_pubkey used to encrypt returned data?
+                keccak256(abi.encodePacked(epoch, nonce, encrypted_calldata, return_pubkey)),
+                signature
+            ),
+            "enc: invalid calldata signature"
         );
-        bytes memory raw_calldata = km().decrypt(_input_enc_derive_path(nonce), encrypted_calldata);
-        (bool success, bytes memory data) = address(this).delegatecall(raw_calldata);
-        bytes memory return_data = km().encrypt_to_pubkey(return_pubkey, data);
-        require(success);
-        return return_data;
+        (bool success, bytes memory data) = address(this).delegatecall(bytes.concat(selector, raw_calldata));
+        return_data = encrypt_output(return_pubkey, data);
+        require(success, "enc: call failed");
     }
 
     function rotate_contract_pubkey(uint256 epoch, uint256 nonce)
@@ -74,16 +96,18 @@ abstract contract EncryptedInputsGadget is VersionGadget, AttestationGadget, Cen
         returns (bytes memory pubkey, bytes memory attestation)
     {
         pubkey = km().derive_pubkey(_input_enc_derive_path(nonce));
-        attestation = attest_rotate(_onchain_rotate_pubkey_data(cr_epoch, nonce, pubkey));
+        attestation = offchain_attest(
+            this.onchain_rotate_pubkey.selector, abi.encode(_onchain_rotate_pubkey_data(current_epoch(), nonce, pubkey))
+        );
     }
 
     function onchain_rotate_pubkey(bytes memory pubkey, bytes memory attestation)
         public
-        verify_rotate(_onchain_rotate_pubkey_data(cr_epoch, pubkey_nonce, pubkey), attestation)
+        onchain_verify(abi.encode(_onchain_rotate_pubkey_data(current_epoch(), pubkey_nonce, pubkey)), attestation)
     {
         contract_pubkey = pubkey;
         pubkey_nonce = pubkey_nonce;
-        bump_cr_epoch(cr_epoch);
+        bump_cr_epoch(current_epoch());
     }
 
     // Typed attestation helper (can be autogenerated)
@@ -93,17 +117,8 @@ abstract contract EncryptedInputsGadget is VersionGadget, AttestationGadget, Cen
         bytes pubkey;
     }
 
-    function attest_rotate(_onchain_rotate_pubkey_data memory user_data) private returns (bytes memory) {
-        return offchain_attest(this.onchain_rotate_pubkey.selector, abi.encode(user_data));
-    }
-
-    modifier verify_rotate(_onchain_rotate_pubkey_data memory user_data, bytes memory attestation) {
-        onchain_verify_fn(this.onchain_rotate_pubkey.selector, abi.encode(user_data), attestation);
-        _;
-    }
-
-    function _input_enc_derive_path(uint256 nonce) private returns (bytes memory) {
-        return versioned_derive_path(bytes.concat(input_enc_derivation_path_prefix, abi.encodePacked(nonce), "'"));
+    function _input_enc_derive_path(uint256 nonce) private returns (string memory) {
+        return versioned_derive_path(string.concat(input_enc_derivation_path_prefix, uint32_to_path(uint32(nonce))));
     }
 }
 
@@ -111,14 +126,14 @@ abstract contract EncryptedInputsGadget is VersionGadget, AttestationGadget, Cen
 interface KeyManager {
     // function _seed() private returns (bytes memory); // See KeyManagerBase
 
-    function derive_pubkey(bytes memory path) external returns (bytes memory privkey); // { return abi.encodePacked(BIP32.deriveChildKeyPairFromPath(_seed(), path)[1].key); }
-    function derive_privkey(bytes memory path) external returns (bytes memory privkey); // { return abi.encodePacked(BIP32.deriveChildKeyPairFromPath(_seed(), path)[0].key); }
+    function derive_pubkey(string memory path) external returns (bytes memory pubkey); // { return abi.encodePacked(BIP32.deriveChildKeyPairFromPath(_seed(), path)[1].key); }
+    function derive_privkey(string memory path) external returns (bytes32 privkey); // { return abi.encodePacked(BIP32.deriveChildKeyPairFromPath(_seed(), path)[0].key); }
 
-    function encrypt(bytes memory path, bytes memory plaintext) external returns (bytes memory ciphertext); // { return PKE.encrypt(this.derive_pubkey(path), Suave().localRandom(), plaintext); }
+    function encrypt(string memory path, bytes memory plaintext) external returns (bytes memory ciphertext); // { return PKE.encrypt(this.derive_pubkey(path), Suave().localRandom(), plaintext); }
     function encrypt_to_pubkey(bytes memory pubkey, bytes memory plaintext)
         external
         returns (bytes memory ciphertext); // { return PKE.encrypt(pubkey, Suave().localRandom(), plaintext); }
-    function decrypt(bytes memory path, bytes memory ciphertext) external returns (bytes memory plaintext); // { return PKE.decrypt(this.derive_privkey(path), ciphertext); }
+    function decrypt(string memory path, bytes memory ciphertext) external returns (bytes memory plaintext); // { return PKE.decrypt(this.derive_privkey(path), ciphertext); }
 
     function refresh() external;
 }

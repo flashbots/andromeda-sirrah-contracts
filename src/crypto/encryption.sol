@@ -11,13 +11,6 @@ library PKE {
         return abi.encodePacked(p.X, p.Y);
     }
 
-    function verify(bytes memory pubkey, bytes32 digest, bytes memory sig) internal pure returns (bool) {
-        (uint256 qx, uint256 qy) = abi.decode(pubkey, (uint256, uint256));
-        bytes memory ser = bytes.concat(bytes32(qx), bytes32(qy));
-        address signer = address(uint160(uint256(keccak256(ser))));
-        return Secp256k1.verify(signer, digest, sig);
-    }
-
     function encrypt(bytes memory pubkey, bytes32 r, bytes memory message) internal view returns (bytes memory) {
         (uint256 gx, uint256 gy) = abi.decode(pubkey, (uint256, uint256));
         Curve.G1Point memory pub = Curve.G1Point(gx, gy);

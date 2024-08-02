@@ -6,11 +6,11 @@ import {CensorshipResistanceGadget} from "src/gadgets/CensorshipResistanceGadget
 
 import {IAndromeda} from "src/IAndromeda.sol";
 
-abstract contract KillswitchGadget is AuthGadget, AttestationGadget, CensorshipResistanceGadget {
+abstract contract KillswitchGadget is AttestationGadget, CensorshipResistanceGadget, AuthGadget {
     // Killswitch - disaster damage control
     // Like versioning, but requires a migration instead of an upgrade
-    bool killswitch_active;
-    bytes killswitch_reason;
+    bool public killswitch_active;
+    bytes public killswitch_reason;
 
     // Enclave killswitch
     bytes32 public constant ATTESTED_KILLSWITCH_ROLE = keccak256("attested_killswitch");
@@ -29,13 +29,13 @@ abstract contract KillswitchGadget is AuthGadget, AttestationGadget, CensorshipR
     }
 
     modifier ks( /* should we put check_cr here by default? */ ) {
-        require(!killswitch_active);
-        require(!_get_local_killswitch()); /* TODO: review onboarding after restart */
+        require(!killswitch_active, "killswitch: onchain active");
+        require(!_get_local_killswitch(), "killswitch: local active"); /* TODO: review onboarding after restart */
         _;
     }
 
     modifier ks_active() {
-        require(killswitch_active);
+        require(killswitch_active, "killswitch: onchain not active");
         /* does not require local ks */
         _;
     }
@@ -56,14 +56,14 @@ abstract contract KillswitchGadget is AuthGadget, AttestationGadget, CensorshipR
         public
         onchain_verify((reason), attestation)
     {
-        require(!killswitch_active);
+        require(!killswitch_active, "killswitch: already active");
         killswitch_active = true;
         killswitch_reason = reason;
     }
 
     // Non-attested onchain version (governance / admin)
     function onchain_killswitch(bytes memory reason) public auth(KILLSWITCH_ROLE) {
-        require(!killswitch_active);
+        require(!killswitch_active, "killswitch: already active");
         killswitch_active = true;
         killswitch_reason = reason;
     }
