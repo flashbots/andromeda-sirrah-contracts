@@ -5,8 +5,9 @@ import {AttestationGadget} from "src/gadgets/AttestationGadget.sol";
 abstract contract CensorshipResistanceGadget is AttestationGadget {
     // require explicit onchain challenge on kettle restart
     mapping(bytes32 => bool) private cr_challenges;
-    uint private max_offchain_calls_per_epoch; /* hard limit how many times an offchain call can be performed without epoch bump (0 - no limit) */
-    constructor(uint _max_offchain_calls_per_epoch) {
+    uint256 private max_offchain_calls_per_epoch; /* hard limit how many times an offchain call can be performed without epoch bump (0 - no limit) */
+
+    constructor(uint256 _max_offchain_calls_per_epoch) {
         max_offchain_calls_per_epoch = _max_offchain_calls_per_epoch;
     }
 
@@ -57,10 +58,11 @@ abstract contract CensorshipResistanceGadget is AttestationGadget {
     // Hard limit amount of requests the contract will allow be processed before it forces a re-challenge
     // The contract is expected to be bumped every now and then, and if we stop seeing cr epoch bumps
     //   we should assume the kettle operator is maliciously filtering out requests and force chain sync by clearing challenge
-    function _set_uses_since_local_epoch_update(uint uses) private {
+    function _set_uses_since_local_epoch_update(uint256 uses) private {
         Suave().volatileSet(("uses_since_epoch_update"), bytes32(uses));
     }
-    function _get_uses_since_local_epoch_update()private returns (uint uses) {
+
+    function _get_uses_since_local_epoch_update() private returns (uint256 uses) {
         uses = uint256(Suave().volatileGet("uses_since_epoch_update"));
     }
 
@@ -68,14 +70,14 @@ abstract contract CensorshipResistanceGadget is AttestationGadget {
         if (max_offchain_calls_per_epoch == 0) {
             return;
         }
-        uint uses_since_last_update = _get_uses_since_local_epoch_update();
+        uint256 uses_since_last_update = _get_uses_since_local_epoch_update();
         if (uses_since_last_update >= max_offchain_calls_per_epoch) {
             // force onchain challenge
             _set_local_challenge(Suave().localRandom());
             _set_uses_since_local_epoch_update(0);
             require(false, "cr: epoch update not seen for too long");
         } else {
-            _set_uses_since_local_epoch_update(uses_since_last_update+1);
+            _set_uses_since_local_epoch_update(uses_since_last_update + 1);
         }
     }
 

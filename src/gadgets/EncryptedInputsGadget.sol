@@ -24,6 +24,7 @@ abstract contract EncryptedInputsGadget is VersionGadget, AttestationGadget, Cen
     // Encrypt secret inputs with this key! Rotation triggers new cr epoch.
     bytes public contract_pubkey = bytes("");
     uint256 private pubkey_nonce = 0;
+
     function current_pubkey_nonce() public returns (uint256) {
         return pubkey_nonce;
     }
@@ -50,10 +51,7 @@ abstract contract EncryptedInputsGadget is VersionGadget, AttestationGadget, Cen
     }
 
     /* Called internally */
-    function decrypt_contract_inputs(encrypted_bytes memory ciphertext)
-        internal
-        returns (bytes memory plaintext)
-    {
+    function decrypt_contract_inputs(encrypted_bytes memory ciphertext) internal returns (bytes memory plaintext) {
         plaintext = km().decrypt(_input_enc_derive_path(pubkey_nonce), ciphertext.data);
     }
 
@@ -63,7 +61,9 @@ abstract contract EncryptedInputsGadget is VersionGadget, AttestationGadget, Cen
         view
         returns (uint256, uint256, bytes memory)
     {
-        return (current_epoch(), pubkey_nonce, PKE.encrypt(contract_pubkey, r, abi.encode(selector, encoded_inputs, caller)));
+        return (
+            current_epoch(), pubkey_nonce, PKE.encrypt(contract_pubkey, r, abi.encode(selector, encoded_inputs, caller))
+        );
     }
     /* Manage encryption at the call level */
 
@@ -76,7 +76,8 @@ abstract contract EncryptedInputsGadget is VersionGadget, AttestationGadget, Cen
     ) public check_cr(epoch) returns (encrypted_bytes memory return_data) {
         require(pubkey_nonce == nonce, "enc: invalid pubkey nonce");
         bytes memory raw_encoded_calldata = km().decrypt(_input_enc_derive_path(nonce), encrypted_calldata);
-        (bytes4 selector, bytes memory raw_calldata, address caller) = abi.decode(raw_encoded_calldata, (bytes4, bytes, address));
+        (bytes4 selector, bytes memory raw_calldata, address caller) =
+            abi.decode(raw_encoded_calldata, (bytes4, bytes, address));
         require(
             Secp256k1.verify(
                 caller, // can we derive the caller from return_pubkey used to encrypt returned data?

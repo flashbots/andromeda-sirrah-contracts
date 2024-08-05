@@ -178,7 +178,7 @@ contract CensorshipResistanceGadget_Test is Test {
         require(testContract.force(2) == 2);
 
         // Simulate censorship of onchain bump_epoch
-        for (uint i = 0; i <= 95; i++) {
+        for (uint256 i = 0; i <= 95; i++) {
             assertEq(testContract.check(2), 2);
         }
 
@@ -194,14 +194,14 @@ contract CensorshipResistanceGadget_Test is Test {
         // challenge-based recovery
         assertEq(testContract.check(2), 2);
 
-        uint epoch = 2;
-        for (uint i = 0; i <= 12; i++) {
+        uint256 epoch = 2;
+        for (uint256 i = 0; i <= 12; i++) {
             // make sure epoch bump allows more than 100 calls
             testContract.bump_epoch(epoch);
             epoch += 1;
-        for (uint j = 0; j <= 20; j++) {
-            assertEq(testContract.check(epoch), epoch);
-        }
+            for (uint256 j = 0; j <= 20; j++) {
+                assertEq(testContract.check(epoch), epoch);
+            }
         }
 
         // TODO: simulate restart by clearing volatile memory (switchHost)
@@ -548,7 +548,8 @@ contract EncryptedInputsGadget_TestExt is Test {
         testContract.onchain_restart_challenge(challenge, attestation);
 
         bytes memory pubkey;
-        (pubkey, attestation) = testContract.rotate_contract_pubkey(testContract.current_epoch(), testContract.current_pubkey_nonce());
+        (pubkey, attestation) =
+            testContract.rotate_contract_pubkey(testContract.current_epoch(), testContract.current_pubkey_nonce());
         testContract.onchain_rotate_pubkey(pubkey, attestation);
 
         // TODO: check bad epoch
@@ -579,7 +580,8 @@ contract EncryptedInputsGadget_TestCall is Test {
         testContract.onchain_restart_challenge(challenge, attestation);
 
         bytes memory pubkey;
-        (pubkey, attestation) = testContract.rotate_contract_pubkey(testContract.current_epoch(), testContract.current_pubkey_nonce());
+        (pubkey, attestation) =
+            testContract.rotate_contract_pubkey(testContract.current_epoch(), testContract.current_pubkey_nonce());
         testContract.onchain_rotate_pubkey(pubkey, attestation);
 
         // TODO: check bad epoch
@@ -590,7 +592,10 @@ contract EncryptedInputsGadget_TestCall is Test {
         bytes memory ext_sign_pubkey = abi.encodePacked(qx, qy);
 
         (uint256 epoch, uint256 nonce, bytes memory encrypted_calldata) = testContract.encrypt_call(
-            EncryptedInputsTestContract.raw_f.selector, abi.encode("xoxo"), andromeda.localRandom(), Secp256k1.deriveAddress(uint(ext_privkey))
+            EncryptedInputsTestContract.raw_f.selector,
+            abi.encode("xoxo"),
+            andromeda.localRandom(),
+            Secp256k1.deriveAddress(uint256(ext_privkey))
         );
 
         bytes memory signature = Secp256k1.sign(
@@ -605,7 +610,8 @@ contract EncryptedInputsGadget_TestCall is Test {
             )
         );
 
-        encrypted_bytes memory enc_output = testContract.encrypted_dispatch(epoch, nonce, encrypted_calldata, ext_enc_pubkey, signature);
+        encrypted_bytes memory enc_output =
+            testContract.encrypted_dispatch(epoch, nonce, encrypted_calldata, ext_enc_pubkey, signature);
         assertEq(PKE.decrypt(ext_privkey, enc_output.data), abi.encode(bytes("xoxo")));
         assertEq(abi.decode(PKE.decrypt(ext_privkey, enc_output.data), (bytes)), bytes("xoxo"));
     }
