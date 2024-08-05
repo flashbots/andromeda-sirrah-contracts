@@ -106,7 +106,7 @@ contract CensorshipResistanceTestContract is
     AttestationTestContract,
     CensorshipResistanceGadget
 {
-    constructor(IAndromeda andromeda) AttestationTestContract(andromeda) {}
+    constructor(IAndromeda andromeda) AttestationTestContract(andromeda) CensorshipResistanceGadget(100) {}
 
     function force(uint256 epoch) public force_cr(epoch) returns (uint256) {
         return cr_epoch;
@@ -141,8 +141,8 @@ contract CensorshipResistanceGadget_Test is Test {
         (bytes32 challenge2,) = testContract.offchain_restart_challenge();
         require(challenge2 == challenge);
         testContract.onchain_restart_challenge(challenge, attestation);
-        (bytes32 challenge3,) = testContract.offchain_restart_challenge();
-        require(challenge3 == challenge);
+        vm.expectRevert(bytes("cr: challenge already provided"));
+        testContract.offchain_restart_challenge();
 
         require(testContract.check(0) == 0);
         require(testContract.force(0) == 0);
@@ -176,6 +176,33 @@ contract CensorshipResistanceGadget_Test is Test {
 
         require(testContract.check(2) == 2);
         require(testContract.force(2) == 2);
+
+        // Simulate censorship of onchain bump_epoch
+        for (uint i = 0; i <= 95; i++) {
+            assertEq(testContract.check(2), 2);
+        }
+
+        vm.expectRevert(bytes("cr: epoch update not seen for too long"));
+        testContract.check(2);
+
+        vm.expectRevert(bytes("cr: challenge not provided"));
+        testContract.check(2);
+
+        (challenge, attestation) = testContract.offchain_restart_challenge();
+        testContract.onchain_restart_challenge(challenge, attestation);
+
+        // challenge-based recovery
+        assertEq(testContract.check(2), 2);
+
+        uint epoch = 2;
+        for (uint i = 0; i <= 12; i++) {
+            // make sure epoch bump allows more than 100 calls
+            testContract.bump_epoch(epoch);
+            epoch += 1;
+        for (uint j = 0; j <= 20; j++) {
+            assertEq(testContract.check(epoch), epoch);
+        }
+        }
 
         // TODO: simulate restart by clearing volatile memory (switchHost)
     }
