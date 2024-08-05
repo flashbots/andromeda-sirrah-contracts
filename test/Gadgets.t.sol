@@ -536,6 +536,7 @@ contract EncryptedInputsGadget_TestExt is Test {
 
     function setUp() public {
         andromeda = new AndromedaForge();
+        andromeda.randomHost();
     }
 
     // TODO: check rotation
@@ -568,6 +569,7 @@ contract EncryptedInputsGadget_TestCall is Test {
 
     function setUp() public {
         andromeda = new AndromedaForge();
+        andromeda.randomHost();
     }
 
     function testCallEncryption() public {
