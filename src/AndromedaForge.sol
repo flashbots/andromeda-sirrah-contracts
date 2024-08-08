@@ -70,6 +70,10 @@ contract AndromedaForge is IAndromeda {
         activeHost = host;
     }
 
+    function randomHost() public {
+        switchHost(iToHex(abi.encodePacked(localRandom())));
+    }
+
     function iToHex(bytes memory buffer) public pure returns (string memory) {
         bytes memory converted = new bytes(buffer.length * 2);
         bytes memory _base = "0123456789abcdef";

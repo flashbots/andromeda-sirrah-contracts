@@ -15,6 +15,10 @@ library Secp256k1 {
     }
 
     function verify(address signer, bytes32 digest, bytes memory sig) internal pure returns (bool) {
+        return signer == recover_signer(digest, sig);
+    }
+
+    function recover_signer(bytes32 digest, bytes memory sig) internal pure returns (address) {
         uint8 v;
         bytes32 r;
         bytes32 s;
@@ -23,7 +27,7 @@ library Secp256k1 {
             r := mload(add(sig, 33))
             s := mload(add(sig, 65))
         }
-        return signer == ecrecover(digest, v, r, s);
+        return ecrecover(digest, v, r, s);
     }
 
     function sign(uint256 privateKey, bytes32 digest) internal pure returns (bytes memory) {
@@ -62,6 +66,10 @@ library Secp256k1 {
             v = 28;
         }
         return abi.encodePacked(v, bytes32(r), bytes32(s));
+    }
+
+    function deriveAddress(bytes memory pubkey) internal pure returns (address) {
+        return address(uint160(uint256(keccak256(pubkey))));
     }
 
     function deriveAddress(uint256 privKey) internal pure returns (address) {
