@@ -17,7 +17,7 @@ struct encrypted_bytes {
 // CensorshipResistanceGadget is used to enforce CR on pubkey rotation
 // AttestationGadget is used to update pubkey onchain
 abstract contract EncryptedInputsGadget is VersionGadget, AttestationGadget, CensorshipResistanceGadget {
-    function km() internal view virtual returns (KeyManager);
+    function keyManager() internal view virtual returns (KeyManager);
 
     string private constant input_enc_derivation_path_prefix = "m/1'/";
 
@@ -25,7 +25,7 @@ abstract contract EncryptedInputsGadget is VersionGadget, AttestationGadget, Cen
     bytes public contract_pubkey = bytes("");
     uint256 private pubkey_nonce = 0;
 
-    function current_pubkey_nonce() public returns (uint256) {
+    function current_pubkey_nonce() public view returns (uint256) {
         return pubkey_nonce;
     }
 
@@ -45,14 +45,14 @@ abstract contract EncryptedInputsGadget is VersionGadget, AttestationGadget, Cen
         view
         returns (encrypted_bytes memory)
     {
-        bytes32 r = Suave().localRandom();
+        bytes32 r = andromeda().localRandom();
         bytes memory encrypted_data = PKE.encrypt(pubkey, r, plaintext);
         return encrypted_bytes(encrypted_data);
     }
 
     /* Called internally */
     function decrypt_contract_inputs(encrypted_bytes memory ciphertext) internal returns (bytes memory plaintext) {
-        plaintext = km().decrypt(_input_enc_derive_path(pubkey_nonce), ciphertext.data);
+        plaintext = keyManager().decrypt(_input_enc_derive_path(pubkey_nonce), ciphertext.data);
     }
 
     /* Only on local node! */
@@ -75,7 +75,7 @@ abstract contract EncryptedInputsGadget is VersionGadget, AttestationGadget, Cen
         bytes memory signature
     ) public check_cr(epoch) returns (encrypted_bytes memory return_data) {
         require(pubkey_nonce == nonce, "enc: invalid pubkey nonce");
-        bytes memory raw_encoded_calldata = km().decrypt(_input_enc_derive_path(nonce), encrypted_calldata);
+        bytes memory raw_encoded_calldata = keyManager().decrypt(_input_enc_derive_path(nonce), encrypted_calldata);
         (bytes4 selector, bytes memory raw_calldata, address caller) =
             abi.decode(raw_encoded_calldata, (bytes4, bytes, address));
         require(
@@ -96,7 +96,7 @@ abstract contract EncryptedInputsGadget is VersionGadget, AttestationGadget, Cen
         check_cr(epoch)
         returns (bytes memory pubkey, bytes memory attestation)
     {
-        pubkey = km().derive_pubkey(_input_enc_derive_path(nonce));
+        pubkey = keyManager().derive_pubkey(_input_enc_derive_path(nonce));
         attestation = offchain_attest(
             this.onchain_rotate_pubkey.selector, abi.encode(_onchain_rotate_pubkey_data(current_epoch(), nonce, pubkey))
         );
@@ -130,11 +130,9 @@ interface KeyManager {
     function derive_pubkey(string memory path) external returns (bytes memory pubkey); // { return abi.encodePacked(BIP32.deriveChildKeyPairFromPath(_seed(), path)[1].key); }
     function derive_privkey(string memory path) external returns (bytes32 privkey); // { return abi.encodePacked(BIP32.deriveChildKeyPairFromPath(_seed(), path)[0].key); }
 
-    function encrypt(string memory path, bytes memory plaintext) external returns (bytes memory ciphertext); // { return PKE.encrypt(this.derive_pubkey(path), Suave().localRandom(), plaintext); }
+    function encrypt(string memory path, bytes memory plaintext) external returns (bytes memory ciphertext); // { return PKE.encrypt(this.derive_pubkey(path), andromeda().localRandom(), plaintext); }
     function encrypt_to_pubkey(bytes memory pubkey, bytes memory plaintext)
         external
-        returns (bytes memory ciphertext); // { return PKE.encrypt(pubkey, Suave().localRandom(), plaintext); }
+        returns (bytes memory ciphertext); // { return PKE.encrypt(pubkey, andromeda().localRandom(), plaintext); }
     function decrypt(string memory path, bytes memory ciphertext) external returns (bytes memory plaintext); // { return PKE.decrypt(this.derive_privkey(path), ciphertext); }
-
-    function refresh() external;
 }

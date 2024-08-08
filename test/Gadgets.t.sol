@@ -23,7 +23,7 @@ contract AttestationTestContract is AttestationGadget {
         suave = _suave;
     }
 
-    function Suave() internal view virtual override returns (IAndromeda) {
+    function andromeda() internal view virtual override returns (IAndromeda) {
         return suave;
     }
 
@@ -389,7 +389,7 @@ contract KillswitchTestContract is AuthTestContract, KillswitchGadget {
     }
 
     function _clr() public {
-        Suave().volatileSet("local_killswitch", bytes32("0"));
+        andromeda().volatileSet("local_killswitch", bytes32("0"));
     }
 
     /* ks should always be used with force_cr */
@@ -478,17 +478,17 @@ contract TestKeyManager is KeyManager {
         return _local_seed;
     }
 
-    function derive_pubkey(string memory path) public returns (bytes memory privkey) {
+    function derive_pubkey(string memory path) public view returns (bytes memory privkey) {
         (, BIP32.ExtendedPublicKey memory xpub) = bip32.deriveChildKeyPairFromPath(_seed(), path);
         return xpub.key;
     }
 
-    function derive_privkey(string memory path) public returns (bytes32 privkey) {
+    function derive_privkey(string memory path) public view returns (bytes32 privkey) {
         (BIP32.ExtendedPrivateKey memory xpriv,) = bip32.deriveChildKeyPairFromPath(_seed(), path);
         return xpriv.key;
     }
 
-    function encrypt(string memory path, bytes memory plaintext) external returns (bytes memory ciphertext) {
+    function encrypt(string memory path, bytes memory plaintext) external view returns (bytes memory ciphertext) {
         return PKE.encrypt(this.derive_pubkey(path), suave.localRandom(), plaintext);
     }
 
@@ -500,11 +500,9 @@ contract TestKeyManager is KeyManager {
         return PKE.encrypt(pubkey, suave.localRandom(), plaintext);
     }
 
-    function decrypt(string memory path, bytes memory ciphertext) external returns (bytes memory plaintext) {
+    function decrypt(string memory path, bytes memory ciphertext) external view returns (bytes memory plaintext) {
         return PKE.decrypt(this.derive_privkey(path), ciphertext);
     }
-
-    function refresh() external {}
 }
 
 contract EncryptedInputsTestContract is CensorshipResistanceTestContract, EncryptedInputsGadget {
@@ -514,11 +512,11 @@ contract EncryptedInputsTestContract is CensorshipResistanceTestContract, Encryp
         _km = new TestKeyManager(andromeda);
     }
 
-    function km() internal view virtual override returns (KeyManager) {
+    function keyManager() internal view virtual override returns (KeyManager) {
         return _km;
     }
 
-    function f(uint256 epoch, encrypted_bytes memory data, bytes memory req_pubkey)
+    function f(encrypted_bytes memory data, bytes memory req_pubkey)
         external
         returns (encrypted_bytes memory enc_data)
     {
@@ -526,7 +524,7 @@ contract EncryptedInputsTestContract is CensorshipResistanceTestContract, Encryp
         enc_data = encrypt_output(req_pubkey, output);
     }
 
-    function raw_f(bytes memory data) public returns (bytes memory) {
+    function raw_f(bytes memory data) public pure returns (bytes memory) {
         return data;
     }
 }
@@ -557,9 +555,9 @@ contract EncryptedInputsGadget_TestExt is Test {
         bytes32 ext_privkey = andromeda.localRandom();
         bytes memory ext_pubkey = PKE.derivePubKey(ext_privkey);
 
-        (uint256 epoch, uint256 nonce, encrypted_bytes memory ciphertext) =
+        (,, encrypted_bytes memory ciphertext) =
             testContract.encrypt_contract_inputs(abi.encode("xoxo"), andromeda.localRandom());
-        encrypted_bytes memory enc_output = testContract.f(epoch, ciphertext, ext_pubkey);
+        encrypted_bytes memory enc_output = testContract.f(ciphertext, ext_pubkey);
         assertEq(PKE.decrypt(ext_privkey, enc_output.data), abi.encode(bytes("xoxo")));
         assertEq(abi.decode(PKE.decrypt(ext_privkey, enc_output.data), (bytes)), bytes("xoxo"));
     }

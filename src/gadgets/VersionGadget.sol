@@ -17,7 +17,7 @@ abstract contract VersionGadget {
         return string.concat(path, "/", uint32_to_path(uint32(uint256(current_version()))));
     }
 
-    function uint32_to_path(uint32 n) public returns (string memory) {
+    function uint32_to_path(uint32 n) public pure returns (string memory) {
         return string.concat(Strings.toString(n / 2), "'");
     }
 

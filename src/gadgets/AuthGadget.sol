@@ -28,14 +28,18 @@ abstract contract AuthGadget is VersionGadget, CensorshipResistanceGadget {
     }
 
     modifier auth_query(bytes32 role, bytes memory query, bytes memory signature) {
-        require(auth_signer == address(0), "auth: reentrancy");
-        bytes32 digest = keccak256(abi.encodePacked(current_version(), current_epoch(), msg.sig, query));
-        address signer = Secp256k1.recover_signer(digest, signature);
-        require(Secp256k1.verify(signer, digest, signature), "auth: invalid signature");
-        require(hasRole(role, signer), "auth: signer unauthorized");
+        {
+            require(auth_signer == address(0), "auth: reentrancy");
+            bytes32 digest = keccak256(abi.encodePacked(current_version(), current_epoch(), msg.sig, query));
+            address signer = Secp256k1.recover_signer(digest, signature);
+            require(Secp256k1.verify(signer, digest, signature), "auth: invalid signature");
+            require(hasRole(role, signer), "auth: signer unauthorized");
 
-        auth_signer = signer;
+            auth_signer = signer;
+        }
+
         _;
+
         auth_signer = address(0);
     }
 

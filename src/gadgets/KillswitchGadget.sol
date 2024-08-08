@@ -21,16 +21,18 @@ abstract contract KillswitchGadget is AttestationGadget, CensorshipResistanceGad
     // killswitch should require reaching to other kettles after a restart
     //   to prevent restarting the kettle after the offchain trigger is propagated but before it hits the chain
     function _get_local_killswitch() private returns (bool) {
-        return Suave().volatileGet("local_killswitch") == bytes32("1");
+        return andromeda().volatileGet("local_killswitch") == bytes32("1");
     }
 
     function _set_local_killswitch() private {
-        Suave().volatileSet("local_killswitch", bytes32("1"));
+        andromeda().volatileSet("local_killswitch", bytes32("1"));
     }
 
     modifier ks( /* should we put check_cr here by default? */ ) {
-        require(!killswitch_active, "killswitch: onchain active");
-        require(!_get_local_killswitch(), "killswitch: local active"); /* TODO: review onboarding after restart */
+        {
+            require(!killswitch_active, "killswitch: onchain active");
+            require(!_get_local_killswitch(), "killswitch: local active"); /* TODO: review onboarding after restart */
+        }
         _;
     }
 
