@@ -92,7 +92,7 @@ contract BIP32_Test is Test {
         require(keccak256(childXPub.key) == keccak256(cxPub.key));
     }
 
-    function testDeriveChildPubKeyFromParentPubKeyFail() public view {
+    function testDeriveChildPubKeyFromParentPubKeyFail() public {
         bytes memory seed = abi.encodePacked("MySecretPassword");
 
         // derive the master key directly and when using a seed and a path

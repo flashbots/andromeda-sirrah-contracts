@@ -14,18 +14,28 @@ interface Vm {
 contract AndromedaForge is IAndromeda {
     using strings for *;
 
-    bytes32 constant salt = hex"234902409284092384092384";
+    bytes32 defaultSalt = hex"234902409284092384092384";
+    mapping(string => bytes32) public salts;
 
     Vm constant vm = Vm(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
 
-    function attestSgx(bytes32 appData) public view returns (bytes memory) {
+    function attestSgx(bytes32 appData) public returns (bytes memory) {
         // Make a fake attestation just using a salt
+        if (salts[activeHost] == bytes32(0)) {
+            salts[activeHost] = defaultSalt;
+        }
+        bytes32 salt = salts[activeHost];
         bytes32 hash = keccak256(abi.encode(salt, msg.sender, appData));
         return abi.encodePacked(hash);
     }
 
-    function verifySgx(address caller, bytes32 appData, bytes memory att) public pure returns (bool) {
+    function verifySgx(address caller, bytes32 appData, bytes memory att) public view returns (bool) {
         // Recreate the fake attestation
+        // if (salts[activeHost] == bytes32(0)) {
+        //     salts[activeHost] = defaultSalt;
+        // }
+        bytes32 salt = salts[activeHost];
+        require(salt == defaultSalt, "mrenclave does not match");
         bytes32 hash = keccak256(abi.encode(salt, caller, appData));
         return hash == abi.decode(att, (bytes32));
     }
@@ -38,8 +48,12 @@ contract AndromedaForge is IAndromeda {
         return bytes32(res);
     }
 
-    function sealingKey(bytes32 tag) public view returns (bytes32) {
+    function sealingKey(bytes32 tag) public returns (bytes32) {
         // Make a fake sealing key just using a salt
+        if (salts[activeHost] == bytes32(0)) {
+            salts[activeHost] = defaultSalt;
+        }
+        bytes32 salt = salts[activeHost];
         return bytes32(keccak256(abi.encode(activeHost, salt, msg.sender, tag)));
     }
 
@@ -91,5 +105,9 @@ contract AndromedaForge is IAndromeda {
 
     function doHTTPRequest(IAndromeda.HttpRequest memory) external pure returns (bytes memory) {
         return bytes("");
+    }
+
+    function setTrustedMrEnclave(bytes32 mrenclave_) external {
+        defaultSalt = mrenclave_;
     }
 }

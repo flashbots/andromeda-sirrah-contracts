@@ -37,7 +37,7 @@ contract AndromedaRemote is IAndromeda, DcapDemo {
     function initialize() public {
         // This is the dummy enclave from the service
         // https://github.com/amiller/gramine-dummy-attester/tree/dcap
-	setMrSigner(bytes32(0x1cf2e52911410fbf3f199056a98d58795a559a2e800933f7fcd13d048462271c), true);
+        setMrSigner(bytes32(0x1cf2e52911410fbf3f199056a98d58795a559a2e800933f7fcd13d048462271c), true);
         setMrEnclave(bytes32(0xed24ce78cd65438dc3b74e549b1ad5c591dba88e2078e676fca600ebbec21370), true);
 
         // Set the timestamp (to avoid certificate expiry check);
@@ -75,7 +75,7 @@ contract AndromedaRemote is IAndromeda, DcapDemo {
 	console2.logBytes(userdata);
 	bytes memory userReport = abi.encodePacked(sha256(userdata), uint(0));
         string[] memory inputs = new string[](3);
-        inputs[0] = "python";
+        inputs[0] = "python3";
         inputs[1] = "ffi/ffi-fetchquote-dcap.py";
         inputs[2] = iToHex(abi.encodePacked(userReport));
         bytes memory res = vm.ffi(inputs);
@@ -93,6 +93,11 @@ contract AndromedaRemote is IAndromeda, DcapDemo {
         }
         return this.verifyAttestation(att);
     }
+
+    function setTrustedMrEnclave(bytes32 mrenclave) external {
+        setMrEnclave(mrenclave, true);
+    }
+
 
     function localRandom() public view returns (bytes32) {
         string[] memory inputs = new string[](2);

@@ -10,7 +10,8 @@ interface IAndromeda is IHash {
     function volatileSet(bytes32 tag, bytes32 value) external;
     function volatileGet(bytes32 tag) external returns (bytes32);
     function localRandom() external view returns (bytes32);
-    function sealingKey(bytes32 tag) external view returns (bytes32);
+    function sealingKey(bytes32 tag) external returns (bytes32);
+    function setTrustedMrEnclave(bytes32 mrenclave) external;
 
     struct HttpRequest {
         string url;
