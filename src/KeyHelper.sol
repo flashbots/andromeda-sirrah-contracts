@@ -3,10 +3,10 @@ pragma solidity ^0.8.13;
 import "./KeyManager.sol";
 
 contract AuthHelper {
-    KeyManager_v0 private keymgr;
+    KeyManagerBase private keymgr;
     address owner;
 
-    constructor(KeyManager_v0 _keymgr) {
+    constructor(KeyManagerBase _keymgr) {
         keymgr = _keymgr; // Note that we only derive privkey, so we don't require derivekey be called with the address of this (private) contract. The key manager has to be bootstrapped.
         owner = msg.sender; // Can we really trust the sender though? The kettle could be spoofing it
     }
@@ -19,10 +19,10 @@ contract AuthHelper {
 }
 
 contract KeyHelper {
-    KeyManager_v0 private keymgr;
+    KeyManagerBase private keymgr;
     AuthHelper private auth_helper;
 
-    constructor(KeyManager_v0 _keymgr) {
+    constructor(KeyManagerBase _keymgr) {
         keymgr = _keymgr;
         auth_helper = new AuthHelper(_keymgr);
     }
@@ -95,4 +95,3 @@ contract KeyHelper {
         return (true, PKE.decrypt(privkey(), ciphertext));
     }
 }
-

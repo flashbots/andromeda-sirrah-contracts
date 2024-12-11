@@ -17,7 +17,7 @@ contract AndromedaForgeTest is Test {
         require(a != b);
     }
 
-    function test_sealingkey() public view {
+    function test_sealingkey() public {
         bytes32 msghash = keccak256(abi.encodePacked("hi"));
 
         bytes32 a = andromeda.sealingKey(msghash);
@@ -38,6 +38,33 @@ contract AndromedaForgeTest is Test {
 
         // Callers should have different domains
         assertFalse(andromeda.verifySgx(address(andromeda), msghash, att));
+    }
+
+    function test_setMrenclave() public {
+        bytes32 msghash = keccak256(abi.encodePacked("hi"));
+        andromeda.switchHost("version_0");
+        // Attestation should check
+        bytes memory att = andromeda.attestSgx(msghash);
+        assert(andromeda.verifySgx(address(this), msghash, att));
+
+        // Unattested should not
+        bytes32 msghash2 = keccak256(abi.encodePacked("hi2"));
+        assertFalse(andromeda.verifySgx(address(this), msghash2, att));
+
+        // Callers should have different domains
+        assertFalse(andromeda.verifySgx(address(andromeda), msghash, att));
+
+        andromeda.setTrustedMrEnclave(bytes32(0x1cf2e52911410fbf3f199056a98d58795a559a2e800933f7fcd13d048462271c));
+        andromeda.switchHost("version_1");
+
+        //should fail after mrenclave is updated
+        vm.expectRevert("mrenclave does not match");
+        andromeda.verifySgx(address(this), msghash, att);
+
+        //succedes with updated attestations
+        bytes memory att2 = andromeda.attestSgx(msghash);
+        assert(andromeda.verifySgx(address(this), msghash, att2));
+    
     }
 
     function test_SetGet() public {

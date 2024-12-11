@@ -74,4 +74,7 @@ contract Andromeda is IAndromeda, DcapDemo {
         require(success);
         return abi.decode(data, (bytes));
     }
+    function setTrustedMrEnclave(bytes32 mrenclave_) external {
+        setMrEnclave(mrenclave_, true);
+    }
 }
